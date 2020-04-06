@@ -1,7 +1,10 @@
 const fs = require('fs');
 const Discord = require('discord.js');
-const { prefix, token } = require('./config.json');
-const Client = require('./client/Client');
+
+// Removed config.js in favour of env variables
+// const { prefix, token } = require('./config.json');
+const prefix = process.env.prefix;
+const token =  process.env.token;
 
 const mc = "661614179358343189";
 const rust = "661613866848878623";
@@ -35,8 +38,8 @@ var emojiname = [mc, rust, lol, weed, taylor, eso, halo, apex, cod, plex, tarkov
 //    Add role name
 var rolename = [mcRole, rustRole, lolRole, weedRole, taylorRole, esoRole, haloRole, apexRole, codRole, plexRole, tarkovRole, runeterraRole, philRole];
 
-const client = new Client();
-client.commands = new Discord.Collection();
+const client = new Discord.Client();
+client.commands = new Discord.Collection();[[]]
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
