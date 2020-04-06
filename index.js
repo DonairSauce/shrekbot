@@ -1,6 +1,10 @@
 const fs = require('fs');
 const Discord = require('discord.js');
-const { prefix, token } = require('./config.json');
+
+// Removed config.js in favour of env variables
+// const { prefix, token } = require('./config.json');
+const prefix = process.env.prefix;
+const token =  process.env.token;
 
 const mc = "661614179358343189";
 const rust = "661613866848878623";

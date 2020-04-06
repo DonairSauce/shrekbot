@@ -7,8 +7,12 @@ module.exports = {
         const fetch = require('node-fetch');
         const Discord = require('discord.js');
 
-        //values from config.json
-        const { ombiToken, ombiIP, ombiPort } = require('../config.json');
+        // Removed config.js in favour of env variables
+        // const { ombiToken, ombiIP, ombiPort } = require('../config.json');
+        const ombiIP = process.env.ombiip;
+        const ombiPort = process.env.ombiport;
+        const ombiToken = process.env.ombitoken;
+        
         args = args.toString();
         args = args.replace(/,/g, " ");
         const query = encodeURIComponent(args);
