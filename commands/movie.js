@@ -1,18 +1,12 @@
 module.exports = {
     name: 'movie',
-    description: 'Searches TMDB for movies and requests them in Ombi',
+    description: 'Request movies shows to Ombi',
     async execute(message, args) {
 
         const fetch = require('node-fetch');
         const Discord = require('discord.js');
         const querystring = require('querystring');
-        
-        // Removed config.js in favour of env variables
-        // const { ombiToken, ombiIP, ombiPort } = require('../config.json');
-        const ombiIP = process.env.ombiip;
-        const ombiPort = process.env.ombiport;
-        const ombiToken = process.env.ombitoken;
-
+        const { ombiToken, ombiIP, ombiPort } = require('../config.json');
         args = args.toString();
         args = args.replace(/,/g, " ");
         const query = encodeURIComponent(args);
@@ -82,7 +76,7 @@ module.exports = {
 
             function movieBuilder() {
 
-                const embed = new Discord.RichEmbed()
+                const embed = new Discord.MessageEmbed()
                     .setColor('#0099ff')
                     .setTitle(movies[position].title + (movies[position].releaseDate == null ? '' : (' (' + movies[position].releaseDate.substring(0, 4) + ')')))
                     .setURL('https://www.themoviedb.org/movie/' + movies[position].id)

@@ -1,18 +1,14 @@
 module.exports = {
     name: 'tv',
-    description: 'Searches TVDB for TV shows and requests them in Ombi',
+    description: 'Request tv shows to Ombi',
     async execute(message, args) {
 
         //libraries
         const fetch = require('node-fetch');
         const Discord = require('discord.js');
 
-        // Removed config.js in favour of env variables
-        // const { ombiToken, ombiIP, ombiPort } = require('../config.json');
-        const ombiIP = process.env.ombiip;
-        const ombiPort = process.env.ombiport;
-        const ombiToken = process.env.ombitoken;
-        
+        //values from config.json
+        const { ombiToken, ombiIP, ombiPort } = require('../config.json');
         args = args.toString();
         args = args.replace(/,/g, " ");
         const query = encodeURIComponent(args);
@@ -26,7 +22,7 @@ module.exports = {
                     'ApiKey': ombiToken
                 }
             }).then(response => response.json());
-
+            
         } catch (err) {
             console.log(err);
         }
@@ -43,7 +39,7 @@ module.exports = {
 
         //pulls the results and throws them into usable data
         if (Object.keys(tvResults).length > 0) {
-
+         
             var tvShows = [];
             var position = 0;
             var maxNumberOfShows = 10;
@@ -65,7 +61,7 @@ module.exports = {
 
                 } catch (err) {
                     console.log(err);
-                    console.log(tvInfo);
+                  
                 }
 
 
@@ -86,15 +82,16 @@ module.exports = {
                 object.imdbID = tvResults[i].imdbId;
                 object.available = tvInfo.available;
                 object.requested = tvInfo.requested;
-
+               
                 tvShows.push(object);
-
+                
             }
 
             //this shit builds the embeded message for the bot to send
             function showBuilder() {
                 try {
-                    const embed = new Discord.RichEmbed()
+                 
+                    const embed = new Discord.MessageEmbed()
                         .setColor('#0099ff')
                         .setTitle(tvShows[position].title + (tvShows[position].releaseDate == null ? '' : (' (' + tvShows[position].releaseDate.substring(0, 4) + ')')))
                         .setURL('https://imdb.com/title/' + tvShows[position].imdbID)
