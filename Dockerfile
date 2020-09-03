@@ -17,5 +17,5 @@ RUN npm install discord.js
 # Bundle app source
 COPY . .
 
-
+# Execute our app!
 CMD [ "node", "index.js" ]
