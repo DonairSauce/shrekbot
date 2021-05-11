@@ -7,7 +7,7 @@ module.exports = {
         //This command removes all messages from all users in the channel, up to 100.
 
         // get the delete count, as an actual number.
-        const deleteCount = parseInt(args[0], 10);
+        var deleteCount = parseInt(args[0], 10);
         deleteCount++;
         
         // So we get our messages, and delete them. Simple enough, right?
