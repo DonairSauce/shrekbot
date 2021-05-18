@@ -77,4 +77,10 @@ client.on('message', async message => {
 	}
 });
 
+client.on('voiceStateUpdate', (oldState, newState) => {
+	const role = newState.guild.roles.cache.find(r => r.name === 'Voice');
+    if (!newState.channel || !newState.member && newState.member.roles.cache.has(role)) newState.member.roles.remove(role);; // Triggered if the user left a channel
+    if (!newState.member.roles.cache.has(role)) newState.member.roles.add(role); // Add the role to the user if they don't already have it
+});
+
 client.login(token);

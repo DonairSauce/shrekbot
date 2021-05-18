@@ -31,8 +31,6 @@ module.exports = {
             console.log(err);
         }
 
-//hjeloas
-
         //varibles for the reaction IDs
         var btGreyNext = "652625101585645573";
         var btGreyBack = "652625101543440415";
