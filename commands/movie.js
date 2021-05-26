@@ -31,12 +31,12 @@ module.exports = {
         }
         
         //varibles for the reaction IDs
-        var btGreyNext = "847173664059293786";
-        var btGreyBack = "847173643909595168";
-        var btNext = "847173631951765536";
-        var btBack = "847173606873366550";
-        var btDownload = "847173619707674676";
-        var btGreyDownload = "847173656517017701";
+        var btGreyNext = "847172782441496617";
+        var btGreyBack = "847172782692368394";
+        var btNext = "847172781816676353";
+        var btBack = "847172782411481108";
+        var btDownload = "847172781904232490";
+        var btGreyDownload = "847172782294564956";
 
         if (movieResults.length > 0) {
 
