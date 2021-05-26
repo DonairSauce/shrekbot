@@ -31,15 +31,13 @@ module.exports = {
             console.log(err);
         }
 
-
-
         //varibles for the reaction IDs
-        var btGreyNext = "652625101585645573";
-        var btGreyBack = "652625101543440415";
-        var btNext = "652625101572931584";
-        var btBack = "652625101564411905";
-        var btDownload = "652625101526663224";
-        var btGreyDownload = "672265068913754122";
+        var btGreyNext = "847173664059293786";
+        var btGreyBack = "847173643909595168";
+        var btNext = "847173631951765536";
+        var btBack = "847173606873366550";
+        var btDownload = "847173619707674676";
+        var btGreyDownload = "847173656517017701";
 
         //pulls the results and throws them into usable data
         if (Object.keys(tvResults).length > 0) {
