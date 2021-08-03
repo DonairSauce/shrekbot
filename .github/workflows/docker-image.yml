@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      run: docker build . --file Dockerfile --tag shrekbot:$(date +%s)
     
     - name: Log in to registry
         # This is where you will update the PAT to GITHUB_TOKEN
@@ -34,7 +34,7 @@ jobs:
         # Use Docker `latest` tag convention
         [ "$VERSION" == "master" ] && VERSION=latest
         echo IMAGE_NAME=shrekbot
-        echo IMAGE_ID=$IMAGE_ID
+        echo IMAGE_ID=$(date +%s)
         echo VERSION=$VERSION
         docker tag ghcr.io/${{ github.repository_owner }}/shrekbot shrekbot:latest
         docker push $IMAGE_ID:$VERSION
