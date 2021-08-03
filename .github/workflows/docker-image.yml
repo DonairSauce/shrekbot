@@ -23,7 +23,7 @@ jobs:
 
     - name: Push image
       run: |
-        IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+        IMAGE_ID=ghcr.io/${{ github.repository_owner }}/shrekbot
 
         # Change all uppercase to lowercase
         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -36,5 +36,5 @@ jobs:
         echo IMAGE_NAME=shrekbot
         echo IMAGE_ID=$IMAGE_ID
         echo VERSION=$VERSION
-        docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+        docker tag ghcr.io/${{ github.repository_owner }}/shrekbot shrekbot:latest
         docker push $IMAGE_ID:$VERSION
