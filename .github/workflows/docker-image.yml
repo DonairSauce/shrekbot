@@ -23,7 +23,6 @@ jobs:
 
     - name: Push image
       run: |
-        echo IMAGE_NAME=shrekbot
         IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
         # Change all uppercase to lowercase
@@ -34,6 +33,7 @@ jobs:
         [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
         # Use Docker `latest` tag convention
         [ "$VERSION" == "master" ] && VERSION=latest
+        echo IMAGE_NAME=shrekbot
         echo IMAGE_ID=$IMAGE_ID
         echo VERSION=$VERSION
         docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
