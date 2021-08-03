@@ -23,6 +23,7 @@ jobs:
 
     - name: Push image
       run: |
+        echo IMAGE_NAME=shrekbot
         IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
         # Change all uppercase to lowercase
