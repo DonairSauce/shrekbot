@@ -14,9 +14,6 @@ RUN npm install discord.js
 # If you are building your code for production
 # RUN npm ci --only=production
 
-# Publish new commands to discord
-RUN ["node", "deploy-commands.js"]
-
 # Bundle app source
 COPY . .
 
