@@ -12,13 +12,12 @@
   },
   "author": "",
   "license": "ISC",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/TaylorTWBrown/shrekbot/issues"
   },
   "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
   "dependencies": {
     "discord.js": "^13.10.3",
-    "node-fetch": "^3.2.10"
+    "node-fetch": "^2.6.7"
   }
 }
