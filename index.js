@@ -1,16 +1,16 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { Client, Collection, Intents } = require('discord.js');
-var request = require('./commands/request.js');
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { Client, Collection, Intents } from 'discord.js';
+import { search, sendRequest } from './commands/request.js';
 const token =  process.env.token;
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 require('child_process').fork('deploy-commands.js');
 client.commands = new Collection();
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsPath = join(__dirname, 'commands');
+const commandFiles = readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 console.log(commandFiles);
 for (const file of commandFiles) {
-	const filePath = path.join(commandsPath, file);
+	const filePath = join(commandsPath, file);
 	const command = require(filePath);
 	client.commands.set(command.data.name, command);
 }
@@ -35,7 +35,7 @@ client.on('interactionCreate', async interaction => {
 	} else if (interaction.isSelectMenu()) {
 
 		if (interaction.customId == "media_selector") {
-			request.search(interaction.values[0], interaction);
+			search(interaction.values[0], interaction);
 		}
 	} else if (interaction.isButton()) {
 		if (interaction.customId.includes('-button')) {
@@ -43,7 +43,7 @@ client.on('interactionCreate', async interaction => {
 				try {
 					var id = interaction.customId.match(/\d/g).join("");
 					var mediaType = interaction.customId.split('-')[3]
-					request.sendRequest(interaction, id, mediaType);
+					sendRequest(interaction, id, mediaType);
 				} catch (error) {
 					console.log(error);
 				}
