@@ -1,0 +1,23 @@
+{
+  "name": "shrekbot",
+  "version": "1.0.0",
+  "description": "It's ogre.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TaylorTWBrown/shrekbot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TaylorTWBrown/shrekbot/issues"
+  },
+  "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
+  "dependencies": {
+    "discord": "^0.8.2",
+    "node-fetch": "^3.2.10"
+  }
+}
