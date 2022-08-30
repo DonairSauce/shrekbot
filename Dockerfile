@@ -1,4 +1,4 @@
-FROM node:lts
+FROM node:latest
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -10,7 +10,7 @@ COPY *.js ./
 RUN mkdir commands
 COPY commands/*.js ./commands/
 
-RUN npm install discord.js
+RUN npm install
 # If you are building your code for production
 # RUN npm ci --only=production
 
