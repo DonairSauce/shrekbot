@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
   "dependencies": {
-    "discord.js": "^13.10.3",
+    "discord.js": "^14.9.0",
     "node-fetch": "^2.6.7",
     "@discordjs/rest": "^0.5.0",
     "discord-api-types": "^0.34.0"
