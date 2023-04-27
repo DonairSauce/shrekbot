@@ -17,10 +17,10 @@
   },
   "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
   "dependencies": {
-    "@discordjs/rest": "^0.5.0",
-    "discord-api-types": "^0.34.0",
+    "@discordjs/rest": "^1.7.0",
+    "discord-api-types": "^0.37.38",
     "discord-embedbuilder": "^4.0.0",
-    "discord.js": "^13.14.0",
-    "node-fetch": "^2.6.7"
+    "discord.js": "^14.9.0",
+    "node-fetch": "^2.6.9"
   }
 }
