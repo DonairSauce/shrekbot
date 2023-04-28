@@ -8,7 +8,7 @@ const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
 
 let objectsWithoutDefault = [];
-let firstReply = true;
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
@@ -112,7 +112,7 @@ module.exports = {
 			interaction.reply({ content: 'No results available for: "'+args+'". Please try searching again.', ephemeral: true });
 		}
 	},
-
+	
 	search: async function (id, interaction) {
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
@@ -195,15 +195,16 @@ module.exports = {
 
 		let selectMenu = new ActionRowBuilder()
 			.addComponents(objectSelect);
-		if (firstReply) {
+
+		if (interaction.message == undefined) {
+			console.log("reply");
 			if (object.requested || object.available) {
 				interaction.reply({ embeds: [embedMessage], components: [selectMenu] });
-				firstReply = false;
 			} else {
 				interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] });
-				firstReply = false;
 			}
 		} else {
+			console.log("update");
 			if (object.requested || object.available) {
 				interaction.update({ embeds: [embedMessage], components: [selectMenu] });
 			} else {
