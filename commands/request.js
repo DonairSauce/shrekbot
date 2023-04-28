@@ -8,7 +8,7 @@ const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
 
 let objectsWithoutDefault = [];
-
+let firstReply = true;
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
@@ -114,7 +114,6 @@ module.exports = {
 	},
 
 	search: async function (id, interaction) {
-		let firstReply = true;
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
 		var id = splitArray[1];
