@@ -1,6 +1,6 @@
 {
   "name": "shrekbot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "It's ogre.",
   "main": "index.js",
   "scripts": {
@@ -17,9 +17,10 @@
   },
   "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
   "dependencies": {
-    "discord.js": "^13.10.3",
-    "node-fetch": "^2.6.7",
-    "@discordjs/rest": "^0.5.0",
-    "discord-api-types": "^0.34.0"
+    "@discordjs/rest": "^1.7.0",
+    "discord-api-types": "^0.37.38",
+    "discord-embedbuilder": "^4.0.0",
+    "discord.js": "^14.9.0",
+    "node-fetch": "^2.6.9"
   }
 }

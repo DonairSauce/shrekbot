@@ -1,15 +1,18 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { MessageActionRow, MessageSelectMenu, MessageMenuOption, MessageMenu, MessageButton } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder } = require('discord.js');
+const { ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
 const ombiIP = process.env.ombiip;
 const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
 
+let objectsWithoutDefault = [];
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
-		.setDescription('Request command to add new media to 00ze')
+		.setDescription('Request command to add new media to Plex')
 		.addStringOption(option =>
 			option.setName('search')
 				.setDescription('Enter the name of a TV show or movie.')
@@ -52,13 +55,7 @@ module.exports = {
 				maxResults = Object.keys(searchResults).length;
 			}
 			for (var i = 0; i < maxResults; i++) {
-				var object = new Object(),
-					id,
-					mediaType,
-					title,
-					overview,
-					poster
-
+				var object = new Object()
 
 				object.id = searchResults[i].id;
 
@@ -71,32 +68,51 @@ module.exports = {
 
 
 			//reply with dropdown selection
-
-			let objects = [];
-
+			let counter = 0;
+			let idOfFirstItem = "";
+			objects = [];
 			mediaResults.forEach(o => {
 				let emoji = o.mediaType == 'movie' ? '🎥' : '📺';
+				if (counter == 0) {
+					idOfFirstItem = `${o.mediaType + "," + o.id}`
+				}
 				objects.push({
 					label: `${o.title}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
 					value: `${o.mediaType + "," + o.id}`,
-					emoji: (emoji)
+					emoji: (emoji),
+					default: counter == 0 ? true : false
+				});
+				counter++;
+			});
+
+			objectsWithoutDefault = [];
+			mediaResults.forEach(o => {
+				let emoji = o.mediaType == 'movie' ? '🎥' : '📺';
+				objectsWithoutDefault.push({
+					label: `${o.title}`,
+					description: `${o.overview.substr(0, 97) + '...'}`,
+					value: `${o.mediaType + "," + o.id}`,
+					emoji: (emoji),
+					default: counter == 0 ? true : false
 				});
 			});
 
-			const objectSelect = new MessageSelectMenu()
+			const objectSelect = new StringSelectMenuBuilder()
 				.setCustomId('media_selector')
 				.setPlaceholder('Please make a selection')
 				.addOptions(objects);
 
-			let row = new MessageActionRow()
+			let selectMenu = new ActionRowBuilder()
 				.addComponents(objectSelect);
 
-			await interaction.reply({ content: 'Search Results for ' + args, components: [row] });
+			this.search(idOfFirstItem, interaction);
 
+		}else{
+			interaction.reply({ content: 'No results available for: "'+args+'". Please try searching again.', ephemeral: true });
 		}
 	},
-
+	
 	search: async function (id, interaction) {
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
@@ -141,9 +157,7 @@ module.exports = {
 
 		function showBuilder() {
 			try {
-
-
-				const embed = new Discord.MessageEmbed()
+				const embed = new Discord.EmbedBuilder()
 					.setColor('#0099ff')
 					.setTitle(object.title + (object.releaseDate == null ? '' : (' (' + object.releaseDate.substring(0, 4) + ')')))
 					.setURL('https://imdb.com/title/' + object.imdbID)
@@ -151,11 +165,12 @@ module.exports = {
 					.setImage('https://image.tmdb.org/t/p/original/' + object.image)
 					.setTimestamp()
 					.setFooter({
-						text: "Requested by " + member.user.username,
+						text: "Searched by " + member.user.username,
 						iconURL: `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`
 					})
-				if (object.available) embed.addField('__Available__', '✅', true);
-				if (object.requested) embed.addField('__Requested__', '✅', true);
+
+				if (object.available) embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
+				if (object.requested) embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 
 				return embed;
 			} catch (err) {
@@ -165,17 +180,36 @@ module.exports = {
 
 		}
 		const embedMessage = showBuilder();
-		const row = new MessageActionRow()
+		const row = new ActionRowBuilder()
 			.addComponents(
-				new MessageButton()
+				new ButtonBuilder()
 					.setCustomId('request-button-' + id + '-' + mediaType)
-					.setStyle('PRIMARY')
+					.setStyle(ButtonStyle.Primary)
 					.setLabel('Request')
 			)
-		if (object.requested || object.available) {
-			interaction.reply({ embeds: [embedMessage] });
+		const objectSelect = new StringSelectMenuBuilder()
+			.setCustomId('media_selector')
+			.setPlaceholder('Make another selection')
+			.addOptions(objectsWithoutDefault);
+
+
+		let selectMenu = new ActionRowBuilder()
+			.addComponents(objectSelect);
+
+		if (interaction.message == undefined) {
+			console.log("reply");
+			if (object.requested || object.available) {
+				interaction.reply({ embeds: [embedMessage], components: [selectMenu] });
+			} else {
+				interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] });
+			}
 		} else {
-			interaction.reply({ embeds: [embedMessage], components: [row] });
+			console.log("update");
+			if (object.requested || object.available) {
+				interaction.update({ embeds: [embedMessage], components: [selectMenu] });
+			} else {
+				interaction.update({ embeds: [embedMessage], components: [selectMenu, row] });
+			}
 		}
 
 	},
@@ -189,62 +223,79 @@ module.exports = {
 		console.log("dbId: " + dbId);
 		console.log('requester: ' + member.user.username + "#" + member.user.discriminator)
 		if (mediaType == 'movie') {
-			fetch("http://" + ombiIP + ":" + ombiPort + "/api/v1/Request/movie", {
-				method: "post",
-				headers: {
-					'Accept': 'application/json',
-					'Content-Type': 'text/json',
-					'ApiKey': ombiToken,
-					'ApiAlias': member.user.username + "#" + member.user.discriminator
-				},
+			try {
+				fetch("http://" + ombiIP + ":" + ombiPort + "/api/v1/Request/movie", {
+					method: "post",
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'text/json',
+						'ApiKey': ombiToken,
+						'ApiAlias': member.user.username + "#" + member.user.discriminator
+					},
 
-				body: JSON.stringify({
-					'theMovieDbId': id,
-					'languageCode': "en"
+					body: JSON.stringify({
+						'theMovieDbId': id,
+						'languageCode': "en"
+					})
+				}).then((res) => {
+					status = res.status;
+					return res.json()
 				})
-			}).then((res) => {
-				status = res.status;
-				return res.json()
-			})
-				.then((jsonResponse) => {
-					console.log(jsonResponse);
-					console.log(status);
-				})
-				.catch((err) => {
-					// handle error
-					console.error(err);
-				});
+					.then((jsonResponse) => {
+						console.log(jsonResponse);
+						console.log(status);
+					})
+					.catch((err) => {
+						// handle error
+						console.error(err);
+					});
+			} catch (err) {
+				console.error(err)
+			}
 		} else {
-			fetch("http://" + ombiIP + ":" + ombiPort + "/api/v2/Requests/tv", {
-				method: "post",
-				headers: {
-					'Accept': 'application/json',
-					'Content-Type': 'text/json',
-					'ApiKey': ombiToken,
-					'ApiAlias': member.user.username + "#" + member.user.discriminator
+			try {
+				fetch("http://" + ombiIP + ":" + ombiPort + "/api/v2/Requests/tv", {
+					method: "post",
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'text/json',
+						'ApiKey': ombiToken,
+						'ApiAlias': member.user.username + "#" + member.user.discriminator
+					},
 
-				},
-
-				body: JSON.stringify({
-					'theMovieDbId': id,
-					'requestAll': true,
-					'languageCode': "en"
+					body: JSON.stringify({
+						'theMovieDbId': id,
+						'requestAll': true,
+						'languageCode': "en"
+					})
+				}).then((res) => {
+					status = res.status;
+					return res.json()
 				})
-			}).then((res) => {
-				status = res.status;
-				return res.json()
-			})
-				.then((jsonResponse) => {
-					console.log(jsonResponse);
-					console.log(status);
-				})
-				.catch((err) => {
-					// handle error
-					console.error(err);
-				});
+					.then((jsonResponse) => {
+						console.log(jsonResponse);
+						console.log(status);
+					})
+					.catch((err) => {
+						// handle error
+						console.error(err);
+					});
+			} catch (err) {
+				console.error(err);
+			}
 		}
 
+		const row = new ActionRowBuilder()
+			.addComponents(
+				new ButtonBuilder()
+					.setCustomId('request-sent-button-' + id + '-' + mediaType)
+					.setStyle(ButtonStyle.Success)
+					.setLabel('Your request has been submitted')
+					.setDisabled(true)
+			)
 
+		interaction.update({
+			components: [row]
+		})
 	}
-
 }

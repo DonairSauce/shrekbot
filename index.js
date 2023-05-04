@@ -1,9 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Intents } = require('discord.js');
+const { Client, Collection, GatewayIntentBits } = require('discord.js');
 var request = require('./commands/request.js');
 const token =  process.env.token;
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 require('child_process').fork('deploy-commands.js');
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
@@ -17,6 +17,8 @@ for (const file of commandFiles) {
 
 client.once('ready', () => {
 	console.log('Ready!');
+	var pjson = require('./package.json');
+	console.log(pjson);
 });
 
 client.on('interactionCreate', async interaction => {
@@ -32,7 +34,7 @@ client.on('interactionCreate', async interaction => {
 			console.error(error);
 			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 		}
-	} else if (interaction.isSelectMenu()) {
+	} else if (interaction.isStringSelectMenu()) {
 
 		if (interaction.customId == "media_selector") {
 			request.search(interaction.values[0], interaction);
@@ -47,12 +49,9 @@ client.on('interactionCreate', async interaction => {
 				} catch (error) {
 					console.log(error);
 				}
-				interaction.reply("Your request has been submitted.");
-
 			}
 		}
 	}
 });
 
 client.login(token);
-
