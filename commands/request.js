@@ -8,6 +8,7 @@ const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
 
 let objectsWithoutDefault = [];
+var timer, timerExp = 180000;
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -19,7 +20,7 @@ module.exports = {
 				.setRequired(true)),
 	async execute(interaction) {
 		var args = interaction.options.getString('search');
-		
+
 		//Search term 
 		args = args.toString();
 		args = args.replace(/,/g, " ");
@@ -108,11 +109,11 @@ module.exports = {
 
 			this.search(idOfFirstItem, interaction);
 
-		}else{
-			interaction.reply({ content: 'No results available for: "'+args+'". Please try searching again.', ephemeral: true });
+		} else {
+			interaction.reply({ content: 'No results available for: "' + args + '". Please try searching again.', ephemeral: true });
 		}
 	},
-	
+
 	search: async function (id, interaction) {
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
@@ -179,6 +180,20 @@ module.exports = {
 			}
 
 		}
+
+		
+		function timeOut(interaction, milliseconds) {
+			clearTimeout(timer);
+			var start = Date.now();
+			timer = setTimeout(function () {
+				console.log(Date.now() - start);
+				interaction.followUp({ content: 'Timed out', ephemeral: true });
+				interaction.deleteReply();
+
+			}, milliseconds);
+
+		}
+
 		const embedMessage = showBuilder();
 		const row = new ActionRowBuilder()
 			.addComponents(
@@ -202,6 +217,7 @@ module.exports = {
 				interaction.reply({ embeds: [embedMessage], components: [selectMenu] });
 			} else {
 				interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] });
+				timeOut(interaction, timerExp);
 			}
 		} else {
 			console.log("update");
@@ -209,6 +225,7 @@ module.exports = {
 				interaction.update({ embeds: [embedMessage], components: [selectMenu] });
 			} else {
 				interaction.update({ embeds: [embedMessage], components: [selectMenu, row] });
+				timeOut(interaction, timerExp);
 			}
 		}
 
