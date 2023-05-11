@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection } = require('discord.js');
 const { ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
@@ -8,8 +8,8 @@ const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
 
 let objectsWithoutDefault = [];
-var timer, timerExp = 180000;
-
+var timerExp = 180000;
+const timerManager = new Collection();
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
@@ -18,7 +18,7 @@ module.exports = {
 			option.setName('search')
 				.setDescription('Enter the name of a TV show or movie.')
 				.setRequired(true)),
-	async execute(interaction) {
+	async execute(interaction, messageId) {
 		var args = interaction.options.getString('search');
 
 		//Search term 
@@ -75,12 +75,12 @@ module.exports = {
 			mediaResults.forEach(o => {
 				let emoji = o.mediaType == 'movie' ? '🎥' : '📺';
 				if (counter == 0) {
-					idOfFirstItem = `${o.mediaType + "," + o.id}`
+					idOfFirstItem = `${o.mediaType + "," + o.id + "," + messageId}`
 				}
 				objects.push({
 					label: `${o.title}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
-					value: `${o.mediaType + "," + o.id}`,
+					value: `${o.mediaType + "," + o.id + "," + messageId}`,
 					emoji: (emoji),
 					default: counter == 0 ? true : false
 				});
@@ -93,7 +93,7 @@ module.exports = {
 				objectsWithoutDefault.push({
 					label: `${o.title}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
-					value: `${o.mediaType + "," + o.id}`,
+					value: `${o.mediaType + "," + o.id + "," + messageId}`,
 					emoji: (emoji),
 					default: counter == 0 ? true : false
 				});
@@ -118,6 +118,7 @@ module.exports = {
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
 		var id = splitArray[1];
+		var messageId = splitArray[2];
 		let isMovie = false;
 		let isTv = false;
 		let apiSubUrl;
@@ -181,24 +182,25 @@ module.exports = {
 
 		}
 
-		
-		function timeOut(interaction, milliseconds) {
-			clearTimeout(timer);
-			var start = Date.now();
-			timer = setTimeout(function () {
-				console.log(Date.now() - start);
-				interaction.followUp({ content: 'Timed out', ephemeral: true });
+
+		function timeOut(interaction) {
+			if (timerManager.has(messageId)) {
+				console.log('Clear time out');
+				clearTimeout(timerManager.get(messageId))
+			}
+			console.log('Times out in ' + timerExp / 1000 + 'seconds.');
+			const timer = setTimeout(function () {
+				interaction.followUp({ content: 'Your request for ' + info.title + ' timed out', ephemeral: true });
 				interaction.deleteReply();
-
-			}, milliseconds);
-
+			}, timerExp);
+			timerManager.set(messageId, timer);
 		}
 
 		const embedMessage = showBuilder();
 		const row = new ActionRowBuilder()
 			.addComponents(
 				new ButtonBuilder()
-					.setCustomId('request-button-' + id + '-' + mediaType)
+					.setCustomId('request-button-' + id + '-' + mediaType + '-' + messageId)
 					.setStyle(ButtonStyle.Primary)
 					.setLabel('Request')
 			)
@@ -214,31 +216,37 @@ module.exports = {
 		if (interaction.message == undefined) {
 			console.log("reply");
 			if (object.requested || object.available) {
-				interaction.reply({ embeds: [embedMessage], components: [selectMenu] });
+				interaction.reply({ embeds: [embedMessage], components: [selectMenu] }).then(() => {
+					timeOut(interaction, messageId);
+				});
 			} else {
-				interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] });
-				timeOut(interaction, timerExp);
+				interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] }).then(() => {
+					timeOut(interaction, messageId);
+				});
 			}
 		} else {
 			console.log("update");
 			if (object.requested || object.available) {
-				interaction.update({ embeds: [embedMessage], components: [selectMenu] });
+				interaction.update({ embeds: [embedMessage], components: [selectMenu] }).then(() => {
+					timeOut(interaction, messageId);
+				});
 			} else {
-				interaction.update({ embeds: [embedMessage], components: [selectMenu, row] });
-				timeOut(interaction, timerExp);
+				interaction.update({ embeds: [embedMessage], components: [selectMenu, row] }).then(() => {
+					timeOut(interaction, messageId);
+				});
 			}
 		}
 
 	},
 
-	sendRequest: async function (interaction, id, mediaType) {
+	sendRequest: async function (interaction, id, mediaType, messageId) {
+		clearTimeout(timerManager.get(messageId))
 		const { member } = interaction;
 		console.log("interaction: " + interaction);
 		console.log("id: " + id);
 		console.log("mediaType: " + mediaType);
-		var dbId = (mediaType == 'movie' ? 'theMovieDbId' : 'tvDbId');
-		console.log("dbId: " + dbId);
-		console.log('requester: ' + member.user.username + "#" + member.user.discriminator)
+		console.log('requester: ' + member.user.username + "#" + member.user.discriminator);
+
 		if (mediaType == 'movie') {
 			try {
 				fetch("http://" + ombiIP + ":" + ombiPort + "/api/v1/Request/movie", {
@@ -305,7 +313,7 @@ module.exports = {
 		const row = new ActionRowBuilder()
 			.addComponents(
 				new ButtonBuilder()
-					.setCustomId('request-sent-button-' + id + '-' + mediaType)
+					.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
 					.setStyle(ButtonStyle.Success)
 					.setLabel('Your request has been submitted')
 					.setDisabled(true)
