@@ -263,17 +263,15 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					console.log("res.status - " + res.status);
-					changeButton(res.status);
-					return res.json()
-				})
-					.then((jsonResponse) => {
-						console.log(jsonResponse);
-					})
-					.catch((err) => {
-						// handle error
-						console.error(err);
-					});
+					responseStatus = res.status; // Store the response status in a variable
+					console.log("res.status - " + responseStatus);
+					return res.json();
+				}).then((jsonResponse) => {
+					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).catch((err) => {
+					// handle error
+					console.error(err);
+				});
 			} catch (err) {
 				console.error(err)
 			}
@@ -294,33 +292,33 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					console.log("res.status - " + res.status);
-					changeButton(res.status);
-					return res.json()
-				})
-					.then((jsonResponse) => {
-						console.log(jsonResponse);
-					})
-					.catch((err) => {
-						// handle error
-						console.error(err);
-					});
+					responseStatus = res.status; // Store the response status in a variable
+					console.log("res.status - " + responseStatus);
+					return res.json();
+				}).then((jsonResponse) => {
+					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).catch((err) => {
+					// handle error
+					console.error(err);
+				});
 			} catch (err) {
-				console.error(err);
+				console.error(err)
 			}
 		}
 
-		function changeButton(responseStatusCode) {
+		function changeButton(responseStatusCode, jsonResponse) {
+			console.log(jsonResponse);
 			let success = false;
-			console.log("changeButton " + responseStatusCode);
+			console.log("response code " + responseStatusCode);
 			success = responseStatusCode >= 200 && responseStatusCode < 300;
 			console.log(success);
+			let errorMessage = jsonResponse.message == undefined ? jsonResponse.title : jsonResponse.message;
 			const row = new ActionRowBuilder()
 				.addComponents(
 					new ButtonBuilder()
 						.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
-						.setStyle(success ? ButtonStyle.Success : ButtonStyle.Danger)
-						.setLabel(success ? 'Your request has been submitted' : 'Your request failed with response code ' + responseStatusCode + '. Please contact your administrator.')
+						.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
+						.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
 						.setDisabled(true)
 				)
 				
