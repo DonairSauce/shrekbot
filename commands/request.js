@@ -263,19 +263,17 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					status = res.status;
-					return res.json()
-				})
-					.then((jsonResponse) => {
-						console.log(jsonResponse);
-						console.log(status);
-					})
-					.catch((err) => {
-						// handle error
-						console.error(err);
-					});
+					responseStatus = res.status; // Store the response status in a variable
+					console.log("res.status - " + responseStatus);
+					return res.json();
+				}).then((jsonResponse) => {
+					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).catch((err) => {
+					// handle error
+					console.error(err);
+				});
 			} catch (err) {
-				console.error(err)
+				console.error(err);
 			}
 		} else {
 			try {
@@ -294,33 +292,37 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					status = res.status;
-					return res.json()
-				})
-					.then((jsonResponse) => {
-						console.log(jsonResponse);
-						console.log(status);
-					})
-					.catch((err) => {
-						// handle error
-						console.error(err);
-					});
+					responseStatus = res.status; // Store the response status in a variable
+					console.log("res.status - " + responseStatus);
+					return res.json();
+				}).then((jsonResponse) => {
+					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).catch((err) => {
+					// handle error
+					console.error(err);
+				});
 			} catch (err) {
 				console.error(err);
 			}
 		}
 
-		const row = new ActionRowBuilder()
-			.addComponents(
-				new ButtonBuilder()
-					.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
-					.setStyle(ButtonStyle.Success)
-					.setLabel('Your request has been submitted')
-					.setDisabled(true)
-			)
+		function changeButton(responseStatusCode, jsonResponse) {
+			console.log(jsonResponse);
+			let success = false;
+			console.log("response code " + responseStatusCode);
+			success = responseStatusCode >= 200 && responseStatusCode < 300;
+			const row = new ActionRowBuilder()
+				.addComponents(
+					new ButtonBuilder()
+						.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
+						.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
+						.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
+						.setDisabled(true)
+				);
 
-		interaction.update({
-			components: [row]
-		})
+			interaction.update({
+				components: [row]
+			});
+		}
 	}
 }
