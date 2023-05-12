@@ -273,7 +273,7 @@ module.exports = {
 					console.error(err);
 				});
 			} catch (err) {
-				console.error(err)
+				console.error(err);
 			}
 		} else {
 			try {
@@ -302,7 +302,7 @@ module.exports = {
 					console.error(err);
 				});
 			} catch (err) {
-				console.error(err)
+				console.error(err);
 			}
 		}
 
@@ -311,8 +311,6 @@ module.exports = {
 			let success = false;
 			console.log("response code " + responseStatusCode);
 			success = responseStatusCode >= 200 && responseStatusCode < 300;
-			console.log(success);
-			let errorMessage = jsonResponse.message == undefined ? jsonResponse.title : jsonResponse.message;
 			const row = new ActionRowBuilder()
 				.addComponents(
 					new ButtonBuilder()
@@ -320,11 +318,11 @@ module.exports = {
 						.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
 						.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
 						.setDisabled(true)
-				)
-				
+				);
+
 			interaction.update({
 				components: [row]
-			})
+			});
 		}
 	}
 }
