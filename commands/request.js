@@ -263,12 +263,12 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					status = res.status;
+					console.log("res.status - " + res.status);
+					changeButton(res.status);
 					return res.json()
 				})
 					.then((jsonResponse) => {
 						console.log(jsonResponse);
-						console.log(status);
 					})
 					.catch((err) => {
 						// handle error
@@ -294,12 +294,12 @@ module.exports = {
 						'languageCode': "en"
 					})
 				}).then((res) => {
-					status = res.status;
+					console.log("res.status - " + res.status);
+					changeButton(res.status);
 					return res.json()
 				})
 					.then((jsonResponse) => {
 						console.log(jsonResponse);
-						console.log(status);
 					})
 					.catch((err) => {
 						// handle error
@@ -310,17 +310,23 @@ module.exports = {
 			}
 		}
 
-		const row = new ActionRowBuilder()
-			.addComponents(
-				new ButtonBuilder()
-					.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
-					.setStyle(ButtonStyle.Success)
-					.setLabel('Your request has been submitted')
-					.setDisabled(true)
-			)
-
-		interaction.update({
-			components: [row]
-		})
+		function changeButton(responseStatusCode) {
+			let success = false;
+			console.log("changeButton " + responseStatusCode);
+			success = responseStatusCode >= 200 && responseStatusCode < 300;
+			console.log(success);
+			const row = new ActionRowBuilder()
+				.addComponents(
+					new ButtonBuilder()
+						.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
+						.setStyle(success ? ButtonStyle.Success : ButtonStyle.Danger)
+						.setLabel(success ? 'Your request has been submitted' : 'Your request failed with response code ' + responseStatusCode + '. Please contact your administrator.')
+						.setDisabled(true)
+				)
+				
+			interaction.update({
+				components: [row]
+			})
+		}
 	}
 }
