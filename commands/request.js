@@ -202,10 +202,17 @@ module.exports = {
 		let selectMenu = new ActionRowBuilder()
 			.addComponents(objectSelect);
 
+		let availableOrRequested = object.available ? "Available" : object.requested ? "Requested" : "";
+		const availableButton = new ButtonBuilder()
+			.setCustomId('mediaAvailable')
+			.setLabel(object.title + ' Is Already ' + availableOrRequested + "!")
+			.setStyle(ButtonStyle.Primary)
+			.setDisabled(true);
+
 		if (interaction.message == undefined) {
 			console.log("reply");
 			if (object.requested || object.available) {
-				interaction.reply({ embeds: [embedMessage], components: [selectMenu] }).then(() => {
+				interaction.reply({ embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)] }).then(() => {
 					timeOut(interaction, messageId);
 				});
 			} else {
@@ -216,7 +223,7 @@ module.exports = {
 		} else {
 			console.log("update");
 			if (object.requested || object.available) {
-				interaction.update({ embeds: [embedMessage], components: [selectMenu] }).then(() => {
+				interaction.update({ embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)] }).then(() => {
 					timeOut(interaction, messageId);
 				});
 			} else {
