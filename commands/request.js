@@ -26,6 +26,12 @@ module.exports = {
 		args = args.replace(/,/g, " ");
 		const query = encodeURIComponent(args);
 
+		var id = await this.getSearchResults(interaction, messageId, query);
+		if (id != undefined) {
+			this.search(id, interaction);
+		}
+	},
+	getSearchResults: async function (interaction, messageId, query) {
 		//api call 
 		var searchResults = {};
 		const body = {
@@ -69,56 +75,39 @@ module.exports = {
 
 
 			//reply with dropdown selection
-			let counter = 0;
 			let idOfFirstItem = "";
-			objects = [];
-			mediaResults.forEach(o => {
-				let emoji = o.mediaType == 'movie' ? '🎥' : '📺';
-				if (counter == 0) {
-					idOfFirstItem = `${o.mediaType + "," + o.id + "," + messageId}`
-				}
-				objects.push({
-					label: `${o.title}`,
-					description: `${o.overview.substr(0, 97) + '...'}`,
-					value: `${o.mediaType + "," + o.id + "," + messageId}`,
-					emoji: (emoji),
-					default: counter == 0 ? true : false
-				});
-				counter++;
-			});
-
+			idOfFirstItem = `${mediaResults[0].mediaType + "," + mediaResults[0].id + "," + messageId + "," + query}` 
+	
 			objectsWithoutDefault = [];
 			mediaResults.forEach(o => {
 				let emoji = o.mediaType == 'movie' ? '🎥' : '📺';
 				objectsWithoutDefault.push({
 					label: `${o.title}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
-					value: `${o.mediaType + "," + o.id + "," + messageId}`,
-					emoji: (emoji),
-					default: counter == 0 ? true : false
+					value: `${o.mediaType + "," + o.id + "," + messageId + "," + query}`,
+					emoji: (emoji)
 				});
 			});
-
-			const objectSelect = new StringSelectMenuBuilder()
-				.setCustomId('media_selector')
-				.setPlaceholder('Please make a selection')
-				.addOptions(objects);
-
-			let selectMenu = new ActionRowBuilder()
-				.addComponents(objectSelect);
-
-			this.search(idOfFirstItem, interaction);
+			
+			if(idOfFirstItem){
+				return idOfFirstItem;
+			}
 
 		} else {
-			interaction.reply({ content: 'No results available for: "' + args + '". Please try searching again.', ephemeral: true });
+			interaction.reply({ content: 'No results available for: "' + query + '". Please try searching again.', ephemeral: true });
 		}
 	},
 
 	search: async function (id, interaction) {
+		console.log(id);
 		var splitArray = id.split(',');
 		var mediaType = splitArray[0];
 		var id = splitArray[1];
 		var messageId = splitArray[2];
+		var searchQuery = splitArray[3];
+		console.log(searchQuery);
+		await this.getSearchResults(interaction, messageId, searchQuery);
+
 		let isMovie = false;
 		let isTv = false;
 		let apiSubUrl;
