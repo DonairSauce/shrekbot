@@ -18,6 +18,7 @@
   "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
   "dependencies": {
     "@discordjs/rest": "^1.7.0",
+    "@microsoft/eslint-formatter-sarif": "^3.0.0",
     "discord-api-types": "^0.37.38",
     "discord-embedbuilder": "^4.0.0",
     "discord.js": "^14.10.2",
