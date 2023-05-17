@@ -251,7 +251,7 @@ module.exports = {
 						'Accept': 'application/json',
 						'Content-Type': 'text/json',
 						'ApiKey': ombiToken,
-						'ApiAlias': member.user.username + "#" + member.user.discriminator
+						'ApiAlias': member.user.username + '#' + member.user.discriminator + ',' + member.user.id
 					},
 
 					body: JSON.stringify({
@@ -279,7 +279,7 @@ module.exports = {
 						'Accept': 'application/json',
 						'Content-Type': 'text/json',
 						'ApiKey': ombiToken,
-						'ApiAlias': member.user.username + "#" + member.user.discriminator
+						'ApiAlias': member.user.username + '#' + member.user.discriminator + ',' + member.user.id
 					},
 
 					body: JSON.stringify({
