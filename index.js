@@ -63,3 +63,35 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(token);
+
+// Express section
+const express = require('express');
+const {channelFeed} = process.env;
+const app = express();
+
+app.use(express.json());
+
+app.post('/webhook', (req, res) => {
+	const payload = req.body;
+
+	// Extract relevant data from the payload
+	const {requestedByAlias, title, userName} = payload;
+	console.log(requestedByAlias);
+	let userId = '';
+	if (requestedByAlias) {
+		userId = '<@' + requestedByAlias.split(',')[1] + '>';
+	} else {
+		userId = userName;
+	}
+
+	// Compose the Discord webhook message
+	const discordMessage = `${userId}, your request for ${title} is now available.`;
+	client.channels.cache.get(channelFeed).send(discordMessage);
+
+	res.sendStatus(200);
+});
+
+app.listen(3000, () => {
+	console.log('Webhook server is running on port 3000');
+});
+
