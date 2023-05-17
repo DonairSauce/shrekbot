@@ -7,9 +7,8 @@ const Discord = require('discord.js');
 const ombiIP = process.env.ombiip;
 const ombiPort = process.env.ombiport;
 const ombiToken = process.env.ombitoken;
-
+const timerExp = process.env.timerexp;
 let objectsWithoutDefault = [];
-const timerExp = 180000;
 const timerManager = new Collection();
 module.exports = {
 	data: new SlashCommandBuilder()
