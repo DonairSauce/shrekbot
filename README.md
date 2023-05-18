@@ -56,7 +56,7 @@ After starting the bot you will need to configure it by visiting ``youripordomai
 ## Docker Setup & Start
 
 If you want to use this bot in a docker container you have to follow these steps:
-* Pull from docker hub: ``docker pull TaylorTWBrown/shrekbot``
+* Pull from : ``docker pull ghcr.io/donairsauce/shrekbot:master``
 * Run docker image:
 ```
 docker run -d --restart=unless-stopped --name shrekbot
