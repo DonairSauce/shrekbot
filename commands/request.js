@@ -261,8 +261,8 @@ module.exports = {
 				}).then(res => {
 					responseStatus = res.status; // Store the response status in a variable
 					return res.json();
-				}).then(jsonResponse => {
-					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).then(async jsonResponse => {
+					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
 				}).catch(err => {
 					// Handle error
 					console.error(err);
@@ -290,8 +290,8 @@ module.exports = {
 					responseStatus = res.status; // Store the response status in a variable
 					console.log('res.status - ' + responseStatus);
 					return res.json();
-				}).then(jsonResponse => {
-					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).then(async jsonResponse => {
+					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
 				}).catch(err => {
 					// Handle error
 					console.error(err);
@@ -301,7 +301,7 @@ module.exports = {
 			}
 		}
 
-		function changeButton(responseStatusCode, jsonResponse) {
+		async function changeButton(responseStatusCode, jsonResponse) {
 			console.log(jsonResponse);
 			let success = false;
 			console.log('response code ' + responseStatusCode);
@@ -315,7 +315,7 @@ module.exports = {
 						.setDisabled(true),
 				);
 
-			interaction.update({
+			await interaction.update({
 				components: [row],
 			});
 		}
