@@ -1,21 +1,21 @@
 {
   "name": "shrekbot",
-  "version": "1.0.1",
+  "version": "3.0.0",
   "description": "It's ogre.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"No test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TaylorTWBrown/shrekbot.git"
+    "url": "git+https://github.com/DonairSauce/shrekbot.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "DonairSauce",
+  "license": "Issued by Lord Farquaad",
   "bugs": {
-    "url": "https://github.com/TaylorTWBrown/shrekbot/issues"
+    "url": "https://github.com/DonairSauce/shrekbot/issues"
   },
-  "homepage": "https://github.com/TaylorTWBrown/shrekbot#readme",
+  "homepage": "https://github.com/DonairSauce/shrekbot",
   "dependencies": {
     "@discordjs/rest": "^1.7.0",
     "@microsoft/eslint-formatter-sarif": "^3.0.0",

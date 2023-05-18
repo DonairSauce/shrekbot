@@ -19,19 +19,21 @@ module.exports = {
 				.setDescription('Enter the name of a TV show or movie.')
 				.setRequired(true)),
 	async execute(interaction, messageId) {
-		let args = interaction.options.getString('search');
+		const args = interaction.options.getString('search');
+		console.log(interaction.member.user.username + ' searched for "' + args + '"');
 
+		const idOfFirstItem = await this.getSearchResults(interaction, messageId, args);
+		if (idOfFirstItem !== undefined) {
+			this.search(idOfFirstItem, interaction);
+		}
+
+		console.log('Search for "' + args + '" by ' + interaction.member.user.username + ' done');
+	},
+	async getSearchResults(interaction, messageId, args) {
 		// Search term
 		args = args.toString();
 		args = args.replace(/,/g, ' ');
 		const query = encodeURIComponent(args);
-
-		const idOfFirstItem = await this.getSearchResults(interaction, messageId, query);
-		if (idOfFirstItem !== undefined) {
-			this.search(idOfFirstItem, interaction);
-		}
-	},
-	async getSearchResults(interaction, messageId, query) {
 		// Api call
 		let searchResults = {};
 		const body = {
@@ -92,18 +94,17 @@ module.exports = {
 				return idOfFirstItem;
 			}
 		} else {
-			interaction.reply({content: 'No results available for: "' + query + '". Please try searching again.', ephemeral: true});
+			console.log('No results found for "' + args + '"');
+			interaction.reply({content: 'No results available for: "' + args + '". Please try searching again.', ephemeral: true});
 		}
 	},
 
 	async search(id, interaction) {
-		console.log(id);
 		const splitArray = id.split(',');
 		const mediaType = splitArray[0];
 		const movieDbId = splitArray[1];
 		const messageId = splitArray[2];
 		const searchQuery = splitArray[3];
-		console.log(searchQuery);
 		await this.getSearchResults(interaction, messageId, searchQuery);
 
 		let isMovie = false;
@@ -183,12 +184,11 @@ module.exports = {
 
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) {
-				console.log('Clear time out');
 				clearTimeout(timerManager.get(messageId));
 			}
 
-			console.log('Times out in ' + (timerExp / 1000) + 'seconds.');
 			const timer = setTimeout(() => {
+				console.log('Search for ' + info.title + ' timed out');
 				interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
 				interaction.deleteReply();
 			}, timerExp);
@@ -219,7 +219,6 @@ module.exports = {
 			.setDisabled(true);
 
 		if (interaction.message === undefined) {
-			console.log('reply');
 			if (object.requested || object.available) {
 				interaction.reply({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
 					timeOut(interaction, messageId);
@@ -229,28 +228,21 @@ module.exports = {
 					timeOut(interaction, messageId);
 				});
 			}
+		} else if (object.requested || object.available) {
+			interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
+				timeOut(interaction, messageId);
+			});
 		} else {
-			console.log('update');
-			if (object.requested || object.available) {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
-					timeOut(interaction, messageId);
-				});
-			} else {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
-					timeOut(interaction, messageId);
-				});
-			}
+			interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
+				timeOut(interaction, messageId);
+			});
 		}
 	},
 
 	async sendRequest(interaction, id, mediaType, messageId) {
 		clearTimeout(timerManager.get(messageId));
 		const {member} = interaction;
-		console.log('interaction: ' + interaction);
-		console.log('id: ' + id);
-		console.log('mediaType: ' + mediaType);
-		console.log('requester: ' + member.user.username + '#' + member.user.discriminator);
-
+		console.log(member.user.username + ' sent a request to Ombi');
 		if (mediaType === 'movie') {
 			try {
 				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v1/Request/movie', {
@@ -268,7 +260,6 @@ module.exports = {
 					}),
 				}).then(res => {
 					responseStatus = res.status; // Store the response status in a variable
-					console.log('res.status - ' + responseStatus);
 					return res.json();
 				}).then(jsonResponse => {
 					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
@@ -328,5 +319,7 @@ module.exports = {
 				components: [row],
 			});
 		}
+
+		console.log('All done, now get out of my swamp');
 	},
 };

@@ -1,25 +1,32 @@
+console.log('Initializing shrekbot');
 const fs = require('node:fs');
 const path = require('node:path');
 const {Client, Collection, GatewayIntentBits} = require('discord.js');
 const request = require('./commands/request.js');
 const {token} = process.env;
+const channelFeed = process.env.channelfeed;
 const client = new Client({intents: [GatewayIntentBits.Guilds]});
 require('child_process').fork('deploy-commands.js');
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-console.log(commandFiles);
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
 	const command = require(filePath);
 	client.commands.set(command.data.name, command);
 }
 
+console.log('Command files loaded');
+
 let currentId = 0;
 client.once('ready', () => {
-	console.log('Ready!');
 	const pjson = require('./package.json');
 	console.log(pjson);
+	const ombiIP = process.env.ombiip;
+	const ombiPort = process.env.ombiport;
+	const timerExp = process.env.timerexp;
+	console.log('Using ombi: ' + ombiIP + ':' + ombiPort);
+	console.log('Message timeout set to: ' + timerExp);
 });
 
 client.on('interactionCreate', async interaction => {
@@ -49,7 +56,6 @@ client.on('interactionCreate', async interaction => {
 		if (interaction.customId.includes('-button')) {
 			if (interaction.customId.includes('request')) {
 				try {
-					console.log('interaction.customId - ' + interaction.customId);
 					const id = interaction.customId.split('-')[2];
 					const mediaType = interaction.customId.split('-')[3];
 					const messageId = interaction.customId.split('-')[4];
@@ -66,7 +72,6 @@ client.login(token);
 
 // Express section
 const express = require('express');
-const {channelFeed} = process.env;
 const app = express();
 
 app.use(express.json());
@@ -76,7 +81,6 @@ app.post('/webhook', (req, res) => {
 
 	// Extract relevant data from the payload
 	const {requestedByAlias, title, userName} = payload;
-	console.log(requestedByAlias);
 	let userId = '';
 	if (requestedByAlias) {
 		userId = '<@' + requestedByAlias.split(',')[1] + '>';
