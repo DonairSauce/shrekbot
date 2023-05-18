@@ -4,6 +4,7 @@ const path = require('node:path');
 const {Client, Collection, GatewayIntentBits} = require('discord.js');
 const request = require('./commands/request.js');
 const {token} = process.env;
+const channelFeed = process.env.channelfeed;
 const client = new Client({intents: [GatewayIntentBits.Guilds]});
 require('child_process').fork('deploy-commands.js');
 client.commands = new Collection();
@@ -71,7 +72,6 @@ client.login(token);
 
 // Express section
 const express = require('express');
-const {channelFeed} = process.env.channelfeed;
 const app = express();
 
 app.use(express.json());

@@ -188,7 +188,7 @@ module.exports = {
 			}
 
 			const timer = setTimeout(() => {
-				console.log('Search for' + info.title + ' timed out');
+				console.log('Search for ' + info.title + ' timed out');
 				interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
 				interaction.deleteReply();
 			}, timerExp);
