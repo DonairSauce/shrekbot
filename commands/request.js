@@ -240,6 +240,18 @@ module.exports = {
 	},
 
 	async sendRequest(interaction, id, mediaType, messageId) {
+		const processing = new ActionRowBuilder()
+			.addComponents(
+				new ButtonBuilder()
+					.setCustomId('processing')
+					.setStyle(ButtonStyle.Success)
+					.setLabel('Your request is processing')
+					.setDisabled(true),
+			);
+
+		await interaction.message.edit({
+			components: [processing],
+		});
 		clearTimeout(timerManager.get(messageId));
 		const {member} = interaction;
 		console.log(member.user.username + ' sent a request to Ombi');
@@ -288,7 +300,6 @@ module.exports = {
 					}),
 				}).then(res => {
 					responseStatus = res.status; // Store the response status in a variable
-					console.log('res.status - ' + responseStatus);
 					return res.json();
 				}).then(async jsonResponse => {
 					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
@@ -315,7 +326,7 @@ module.exports = {
 						.setDisabled(true),
 				);
 
-			await interaction.update({
+			await interaction.message.edit({
 				components: [row],
 			});
 		}

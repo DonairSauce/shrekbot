@@ -59,7 +59,8 @@ client.on('interactionCreate', async interaction => {
 					const id = interaction.customId.split('-')[2];
 					const mediaType = interaction.customId.split('-')[3];
 					const messageId = interaction.customId.split('-')[4];
-					request.sendRequest(interaction, id, mediaType, messageId);
+					interaction.deferUpdate();
+					await request.sendRequest(interaction, id, mediaType, messageId);
 				} catch (error) {
 					console.log(error);
 				}
