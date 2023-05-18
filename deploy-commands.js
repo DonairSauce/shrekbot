@@ -2,8 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {REST} = require('@discordjs/rest');
 const {Routes} = require('discord-api-types/v9');
-const {clientId} = process.env;
-const {guildId} = process.env;
+const clientId = process.env.clientid;
+const guildId = process.env.guildid;
 const {token} = process.env;
 
 const commands = [];

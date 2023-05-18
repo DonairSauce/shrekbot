@@ -81,7 +81,6 @@ app.post('/webhook', (req, res) => {
 
 	// Extract relevant data from the payload
 	const {requestedByAlias, title, userName} = payload;
-	console.log(requestedByAlias);
 	let userId = '';
 	if (requestedByAlias) {
 		userId = '<@' + requestedByAlias.split(',')[1] + '>';
