@@ -95,7 +95,7 @@ app.post('/webhook', (req, res) => {
 	res.sendStatus(200);
 });
 
-app.listen(3000, () => {
-	console.log('Webhook server is running on port 3000');
+app.listen(8154, () => {
+	console.log('Webhook server is running on port 8154');
 });
 
