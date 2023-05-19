@@ -81,19 +81,21 @@ app.post('/webhook', (req, res) => {
 	const payload = req.body;
 
 	// Extract relevant data from the payload
-	const {requestedByAlias, title, userName} = payload;
-	let userId = '';
-	if (requestedByAlias) {
-		userId = '<@' + requestedByAlias.split(',')[1] + '>';
-	} else {
-		userId = userName;
+	const {requestedByAlias, title, userName, requestStatus} = payload;
+	if (requestStatus === 'Available') {
+		let userId = '';
+		if (requestedByAlias) {
+			userId = '<@' + requestedByAlias.split(',')[1] + '>';
+		} else {
+			userId = userName;
+		}
+
+		// Compose the Discord webhook message
+		const discordMessage = `${userId}, your request for ${title} is now available.`;
+		client.channels.cache.get(channelFeed).send(discordMessage);
+
+		res.sendStatus(200);
 	}
-
-	// Compose the Discord webhook message
-	const discordMessage = `${userId}, your request for ${title} is now available.`;
-	client.channels.cache.get(channelFeed).send(discordMessage);
-
-	res.sendStatus(200);
 });
 
 app.listen(8154, () => {
