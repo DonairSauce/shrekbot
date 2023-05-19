@@ -240,6 +240,18 @@ module.exports = {
 	},
 
 	async sendRequest(interaction, id, mediaType, messageId) {
+		const processing = new ActionRowBuilder()
+			.addComponents(
+				new ButtonBuilder()
+					.setCustomId('processing')
+					.setStyle(ButtonStyle.Success)
+					.setLabel('Your request is processing')
+					.setDisabled(true),
+			);
+
+		await interaction.message.edit({
+			components: [processing],
+		});
 		clearTimeout(timerManager.get(messageId));
 		const {member} = interaction;
 		console.log(member.user.username + ' sent a request to Ombi');
@@ -261,8 +273,8 @@ module.exports = {
 				}).then(res => {
 					responseStatus = res.status; // Store the response status in a variable
 					return res.json();
-				}).then(jsonResponse => {
-					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).then(async jsonResponse => {
+					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
 				}).catch(err => {
 					// Handle error
 					console.error(err);
@@ -288,10 +300,9 @@ module.exports = {
 					}),
 				}).then(res => {
 					responseStatus = res.status; // Store the response status in a variable
-					console.log('res.status - ' + responseStatus);
 					return res.json();
-				}).then(jsonResponse => {
-					changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
+				}).then(async jsonResponse => {
+					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
 				}).catch(err => {
 					// Handle error
 					console.error(err);
@@ -301,7 +312,7 @@ module.exports = {
 			}
 		}
 
-		function changeButton(responseStatusCode, jsonResponse) {
+		async function changeButton(responseStatusCode, jsonResponse) {
 			console.log(jsonResponse);
 			let success = false;
 			console.log('response code ' + responseStatusCode);
@@ -315,7 +326,7 @@ module.exports = {
 						.setDisabled(true),
 				);
 
-			interaction.update({
+			await interaction.message.edit({
 				components: [row],
 			});
 		}

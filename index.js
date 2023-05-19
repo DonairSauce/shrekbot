@@ -59,7 +59,8 @@ client.on('interactionCreate', async interaction => {
 					const id = interaction.customId.split('-')[2];
 					const mediaType = interaction.customId.split('-')[3];
 					const messageId = interaction.customId.split('-')[4];
-					request.sendRequest(interaction, id, mediaType, messageId);
+					interaction.deferUpdate();
+					await request.sendRequest(interaction, id, mediaType, messageId);
 				} catch (error) {
 					console.log(error);
 				}
@@ -80,22 +81,24 @@ app.post('/webhook', (req, res) => {
 	const payload = req.body;
 
 	// Extract relevant data from the payload
-	const {requestedByAlias, title, userName} = payload;
-	let userId = '';
-	if (requestedByAlias) {
-		userId = '<@' + requestedByAlias.split(',')[1] + '>';
-	} else {
-		userId = userName;
+	const {requestedByAlias, title, userName, requestStatus} = payload;
+	if (requestStatus === 'Available') {
+		let userId = '';
+		if (requestedByAlias) {
+			userId = '<@' + requestedByAlias.split(',')[1] + '>';
+		} else {
+			userId = userName;
+		}
+
+		// Compose the Discord webhook message
+		const discordMessage = `${userId}, your request for ${title} is now available.`;
+		client.channels.cache.get(channelFeed).send(discordMessage);
+
+		res.sendStatus(200);
 	}
-
-	// Compose the Discord webhook message
-	const discordMessage = `${userId}, your request for ${title} is now available.`;
-	client.channels.cache.get(channelFeed).send(discordMessage);
-
-	res.sendStatus(200);
 });
 
-app.listen(3000, () => {
-	console.log('Webhook server is running on port 3000');
+app.listen(8154, () => {
+	console.log('Webhook server is running on port 8154');
 });
 
