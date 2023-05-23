@@ -41,6 +41,34 @@ Pull the Docker image from the package repository:
 
 Make sure to replace .env with the path to your environment variable file.
 
+## Running Shrekbot without Docker
+
+Please note that these instructions assume you have Node.js and npm installed on your machine. If not, make sure to install them before proceeding.
+To run Shrekbot without Docker, you can follow these steps:
+
+1. Clone the repository: 
+   ```bash
+   git clone https://github.com/donairsauce/Shrekbot.git
+   
+2. Install the required dependencies. Navigate to the cloned repository's directory:
+`cd Shrekbot`
+Then, install the dependencies using a package manager such as npm:
+`npm install`
+
+3. Set the environment variables: Before running Shrekbot, make sure to set the required environment variables. You can do this by creating a .env file in the root directory of the project and specifying the following variables:
+
+`ombitoken=<Ombi server token>
+ombiip=<Ombi server IP>
+ombiport=<Ombi server port>
+clientid=<Discord bot ID>
+guildid=<Discord server ID>
+token=<Bot token from Discord Developer Portal>
+channelfeed=<Channel ID for notifications>
+timerexp=<Time in milliseconds for search expiration>`
+
+4. Start Shrekbot:
+`npm start`
+
 ## Usage
 
 To interact with Shrekbot, join a Discord server where the bot is present. Use the following command to initiate a search and request content:
