@@ -17,12 +17,15 @@ module.exports = {
 		.addStringOption(option =>
 			option.setName('search')
 				.setDescription('Enter the name of a TV show or movie.')
+				.setMaxLength(75)
 				.setRequired(true)),
 	async execute(interaction, messageId) {
-		const args = interaction.options.getString('search');
-		console.log(interaction.member.user.username + ' searched for "' + args + '"');
-
-		const idOfFirstItem = await this.getSearchResults(interaction, messageId, args);
+		// Search term
+		let args = interaction.options.getString('search');
+		args = args.toString();
+		args = args.replace(/,/g, ' ');
+		const query = encodeURIComponent(args);
+		const idOfFirstItem = await this.getSearchResults(interaction, messageId, query);
 		if (idOfFirstItem !== undefined) {
 			this.search(idOfFirstItem, interaction);
 		}
@@ -30,17 +33,15 @@ module.exports = {
 		console.log('Search for "' + args + '" by ' + interaction.member.user.username + ' done');
 	},
 	async getSearchResults(interaction, messageId, args) {
-		// Search term
-		args = args.toString();
-		args = args.replace(/,/g, ' ');
-		const query = encodeURIComponent(args);
+		const searchTerm = decodeURIComponent(args);
+		console.log(interaction.member.user.username + ' searched for "' + searchTerm + '"');
 		// Api call
 		let searchResults = {};
 		const body = {
 			movies: true, tvShows: true, music: false, people: false,
 		};
 		try {
-			searchResults = await fetch('http://' + ombiIP + ':' + ombiPort + '/api/v2/Search/multi/' + query, {
+			searchResults = await fetch('http://' + ombiIP + ':' + ombiPort + '/api/v2/Search/multi/' + args, {
 				method: 'post',
 				body: JSON.stringify(body),
 				headers: {
@@ -77,7 +78,7 @@ module.exports = {
 
 			// Reply with dropdown selection
 			let idOfFirstItem = '';
-			idOfFirstItem = `${mediaResults[0].mediaType + ',' + mediaResults[0].id + ',' + messageId + ',' + query}`;
+			idOfFirstItem = `${mediaResults[0].mediaType + ',' + mediaResults[0].id + ',' + messageId + ',' + args}`;
 
 			objectsWithoutDefault = [];
 			mediaResults.forEach(o => {
@@ -85,7 +86,7 @@ module.exports = {
 				objectsWithoutDefault.push({
 					label: `${o.title}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
-					value: `${o.mediaType + ',' + o.id + ',' + messageId + ',' + query}`,
+					value: `${o.mediaType + ',' + o.id + ',' + messageId + ',' + args}`,
 					emoji,
 				});
 			});
@@ -94,8 +95,12 @@ module.exports = {
 				return idOfFirstItem;
 			}
 		} else {
-			console.log('No results found for "' + args + '"');
-			interaction.reply({content: 'No results available for: "' + args + '". Please try searching again.', ephemeral: true});
+			try {
+				console.log('No results found for "' + searchTerm + '"');
+				interaction.reply({content: 'No results available for: "' + searchTerm + '". Please try searching again.', ephemeral: true});
+			} catch (err) {
+				console.log(err);
+			}
 		}
 	},
 
@@ -188,9 +193,13 @@ module.exports = {
 			}
 
 			const timer = setTimeout(() => {
-				console.log('Search for ' + info.title + ' timed out');
-				interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
-				interaction.deleteReply();
+				try {
+					console.log('Search for ' + info.title + ' timed out');
+					interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
+					interaction.deleteReply();
+				} catch (err) {
+					console.log(err);
+				}
 			}, timerExp);
 			timerManager.set(messageId, timer);
 		}
@@ -214,28 +223,31 @@ module.exports = {
 		const availableOrRequested = object.available ? 'Available' : object.requested ? 'Requested' : '';
 		const availableButton = new ButtonBuilder()
 			.setCustomId('mediaAvailable')
-			.setLabel(object.title + ' Is Already ' + availableOrRequested + '!')
+			.setLabel(object.title.substr(0, 58) + ' Is Already ' + availableOrRequested + '!')
 			.setStyle(ButtonStyle.Primary)
 			.setDisabled(true);
-
-		if (interaction.message === undefined) {
-			if (object.requested || object.available) {
-				interaction.reply({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
+		try {
+			if (interaction.message === undefined) {
+				if (object.requested || object.available) {
+					interaction.reply({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
+						timeOut(interaction, messageId);
+					});
+				} else {
+					interaction.reply({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
+						timeOut(interaction, messageId);
+					});
+				}
+			} else if (object.requested || object.available) {
+				interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
 					timeOut(interaction, messageId);
 				});
 			} else {
-				interaction.reply({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
+				interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
 					timeOut(interaction, messageId);
 				});
 			}
-		} else if (object.requested || object.available) {
-			interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
-				timeOut(interaction, messageId);
-			});
-		} else {
-			interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
-				timeOut(interaction, messageId);
-			});
+		} catch (err) {
+			console.log(err);
 		}
 	},
 
