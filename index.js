@@ -91,7 +91,7 @@ app.post('/webhook', (req, res) => {
 		}
 
 		// Compose the Discord webhook message
-		const discordMessage = `${userId}, your request for ${title} is now available.`;
+		const discordMessage = `${userId}, ${title} is now available!`;
 		client.channels.cache.get(channelFeed).send(discordMessage);
 
 		res.sendStatus(200);
