@@ -17,6 +17,7 @@ module.exports = {
 		.addStringOption(option =>
 			option.setName('search')
 				.setDescription('Enter the name of a TV show or movie.')
+				.setMaxLength(75)
 				.setRequired(true)),
 	async execute(interaction, messageId) {
 		// Search term
