@@ -88,6 +88,8 @@ Shrekbot will process the request and communicate with Ombi to add the selected 
 
 Feel free to explore and request your favorite movies and TV shows with Shrekbot!
 
+![Request Example](https://i.imgur.com/mfHzkCh.png)
+
 ## Enabling Notifications in Ombi
 
 To enable notifications for content availability, follow these steps in Ombi:
@@ -99,6 +101,8 @@ To enable notifications for content availability, follow these steps in Ombi:
 5. Save the settings.
 
 By enabling notifications in Ombi and providing the correct base URL, Shrekbot will be able to send notifications to the specified channel when the requested content becomes available to watch.
+
+![Notification Example](https://i.imgur.com/BtTm5Ze.png)
 
 ## Support and Feedback
 
