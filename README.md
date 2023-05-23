@@ -57,15 +57,15 @@ Then, install the dependencies using a package manager such as npm:
 
 3. Set the environment variables: Before running Shrekbot, make sure to set the required environment variables. You can do this by creating a .env file in the root directory of the project and specifying the following variables:
 
-`ombitoken=<Ombi server token>
+```ombitoken=<Ombi server token>
 ombiip=<Ombi server IP>
 ombiport=<Ombi server port>
 clientid=<Discord bot ID>
 guildid=<Discord server ID>
 token=<Bot token from Discord Developer Portal>
 channelfeed=<Channel ID for notifications>
-timerexp=<Time in milliseconds for search expiration>`
-
+timerexp=<Time in milliseconds for search expiration>
+```
 4. Start Shrekbot:
 `npm start`
 
