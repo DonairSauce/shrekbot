@@ -85,7 +85,11 @@ app.post('/webhook', (req, res) => {
 	if (requestStatus === 'Available') {
 		let userId = '';
 		if (requestedByAlias) {
-			userId = '<@' + requestedByAlias.split(',')[1] + '>';
+			if (requestedByAlias.includes(',')) {
+				userId = '<@' + requestedByAlias.split(',')[1] + '>';
+			} else {
+				userId = requestedByAlias;
+			}
 		} else {
 			userId = userName;
 		}
