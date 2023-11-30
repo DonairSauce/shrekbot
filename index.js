@@ -78,28 +78,38 @@ const app = express();
 app.use(express.json());
 
 app.post('/webhook', (req, res) => {
-	const payload = req.body;
+    console.log('Received webhook:', req.body);
+    const payload = req.body;
 
-	// Extract relevant data from the payload
-	const {requestedByAlias, title, userName, requestStatus} = payload;
-	if (requestStatus === 'Available') {
-		let userId = '';
-		if (requestedByAlias) {
-			if (requestedByAlias.includes(',')) {
-				userId = '<@' + requestedByAlias.split(',')[1] + '>';
-			} else {
-				userId = requestedByAlias;
-			}
-		} else {
-			userId = userName;
-		}
+    try {
+        // Extract relevant data from the payload
+        const { requestedByAlias, title, userName, requestStatus } = payload;
 
-		// Compose the Discord webhook message
-		const discordMessage = `${userId}, ${title} is now available!`;
-		client.channels.cache.get(channelFeed).send(discordMessage);
+        if (requestStatus === 'Available') {
+            let userId = '';
+            if (requestedByAlias) {
+                if (requestedByAlias.includes(',')) {
+                    userId = '<@' + requestedByAlias.split(',')[1] + '>';
+                } else {
+                    userId = requestedByAlias;
+                }
+            } else {
+                userId = userName;
+            }
 
-		res.sendStatus(200);
-	}
+            // Compose the Discord webhook message
+            const discordMessage = `${userId}, ${title} is now available!`;
+            client.channels.cache.get(channelFeed).send(discordMessage);
+
+            res.sendStatus(200);
+        } else {
+            console.log(`Request status is not 'Available', it is: '${requestStatus}'`);
+            res.sendStatus(200); // You might want to send a different status if the request is not processed
+        }
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.listen(8154, () => {
