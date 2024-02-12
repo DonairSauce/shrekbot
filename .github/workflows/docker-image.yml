@@ -9,7 +9,8 @@ on:
   push:
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY_GITHUB: ghcr.io
+  REGISTRY_DOCKERHUB: docker.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -23,10 +24,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Log in to the Container registry
+      - name: Log in to the GHCR
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.REGISTRY_GITHUB }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -34,9 +35,27 @@ jobs:
         id: meta
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.REGISTRY_GITHUB }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ github.actor }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker image
+
+      - name: Build and push Docker image to GitHub
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+      
+      - name: Log in to DockerHub
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: ${{ env.REGISTRY_DOCKERHUB }}
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }} # You need to set this secret in your GitHub repository settings
+
+      - name: Build and push Docker image to DockerHub
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: .
