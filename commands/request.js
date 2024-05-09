@@ -84,7 +84,7 @@ module.exports = {
 			mediaResults.forEach(o => {
 				const emoji = o.mediaType === 'movie' ? '🎥' : '📺';
 				objectsWithoutDefault.push({
-					label: `${o.title}`,
+					label: `${o.title.substr(0, 97) + '...'}`,
 					description: `${o.overview.substr(0, 97) + '...'}`,
 					value: `${o.mediaType + ',' + o.id + ',' + messageId + ',' + args}`,
 					emoji,
