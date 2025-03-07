@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
-const {SlashCommandBuilder} = require('@discordjs/builders');
-const {ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection} = require('discord.js');
-const {ButtonStyle} = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection } = require('discord.js');
+const { ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
 const ombiIP = process.env.ombiip;
@@ -97,7 +97,7 @@ module.exports = {
 		} else {
 			try {
 				console.log('No results found for "' + searchTerm + '"');
-				interaction.reply({content: 'No results available for: "' + searchTerm + '". Please try searching again.', ephemeral: true});
+				interaction.reply({ content: 'No results available for: "' + searchTerm + '". Please try searching again.', ephemeral: true });
 			} catch (err) {
 				console.log(err);
 			}
@@ -157,7 +157,7 @@ module.exports = {
 		object.available = info.available;
 		object.requested = info.requested;
 
-		const {member} = interaction;
+		const { member } = interaction;
 
 		function showBuilder() {
 			try {
@@ -174,11 +174,11 @@ module.exports = {
 					});
 
 				if (object.available) {
-					embed.addFields([{name: '__Available__', value: '✅', inline: true}]);
+					embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
 				}
 
 				if (object.requested) {
-					embed.addFields([{name: '__Requested__', value: '✅', inline: true}]);
+					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 				}
 
 				return embed;
@@ -195,7 +195,7 @@ module.exports = {
 			const timer = setTimeout(() => {
 				try {
 					console.log('Search for ' + info.title + ' timed out');
-					interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
+					interaction.followUp({ content: 'Your request for ' + info.title + ' timed out', ephemeral: true });
 					interaction.deleteReply();
 				} catch (err) {
 					console.log(err);
@@ -229,20 +229,20 @@ module.exports = {
 		try {
 			if (interaction.message === undefined) {
 				if (object.requested || object.available) {
-					interaction.reply({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
+					interaction.reply({ embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)] }).then(() => {
 						timeOut(interaction, messageId);
 					});
 				} else {
-					interaction.reply({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
+					interaction.reply({ embeds: [embedMessage], components: [selectMenu, row] }).then(() => {
 						timeOut(interaction, messageId);
 					});
 				}
 			} else if (object.requested || object.available) {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
+				interaction.update({ embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)] }).then(() => {
 					timeOut(interaction, messageId);
 				});
 			} else {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
+				interaction.update({ embeds: [embedMessage], components: [selectMenu, row] }).then(() => {
 					timeOut(interaction, messageId);
 				});
 			}
@@ -265,7 +265,7 @@ module.exports = {
 			components: [processing],
 		});
 		clearTimeout(timerManager.get(messageId));
-		const {member} = interaction;
+		const { member } = interaction;
 		console.log(member.user.username + ' sent a request to Ombi');
 		if (mediaType === 'movie') {
 			try {
