@@ -2,7 +2,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection } = require('discord.js');
 const { ButtonStyle } = require('discord.js');
-const fetch = require('node-fetch');
+const fetch = require('node-fetch').default;
 const Discord = require('discord.js');
 const ombiIP = process.env.ombiip;
 const ombiPort = process.env.ombiport;
