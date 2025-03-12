@@ -13,6 +13,28 @@ Shrekbot is a Discord bot inspired by the lovable ogre himself, Shrek. It allows
 - **Notifications**: Shrekbot can notify users when the content they requested becomes available, keeping them updated and ready to watch.
 - **Shrek-themed Interface**: Embrace the charm of Shrek with a bot that reflects the spirit of the beloved ogre.
 
+## Getting Started
+
+### Creating a Discord Bot
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Click **New Application**, name it "Shrekbot," and click **Create**.
+3. Select **Bot** from the sidebar, click **Add Bot**, and confirm.
+4. Under **Bot**, click **Reset Token** or **View Token** and copy it securely.
+
+> **Important:** Never share or commit your bot token publicly.
+
+### Adding Shrekbot to Your Server
+
+Shrekbot needs the following permissions:
+
+- Read Messages
+- Read Message History
+- Embed Links
+- Use Slash Commands
+
+Generate an invite link in the **OAuth2** tab of your bot's Discord Developer Portal and invite the bot to your Discord server.
+
 ### Configuration
 
 Before running Shrekbot, you need to set the following environment variables:
