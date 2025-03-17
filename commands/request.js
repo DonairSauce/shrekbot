@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 const {SlashCommandBuilder} = require('@discordjs/builders');
 const {ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection} = require('discord.js');
 const {ButtonStyle} = require('discord.js');
