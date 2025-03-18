@@ -22,7 +22,7 @@
     "discord-api-types": "^0.37.119",
     "discord.js": "^14.18.0",
     "express": "^4.21.2",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.6.9"
   },
   "devDependencies": {
     "env-cmd": "^10.1.0"
