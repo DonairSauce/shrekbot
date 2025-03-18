@@ -59,7 +59,7 @@ Pull the Docker image from the package repository:
 `docker run -d \
   --name shrekbot \
   --env-file .env \
-  ghcr.io/donairsauce/shrekbot:master`
+  ghcr.io/donairsauce/shrekbot:latest`
 
 Make sure to replace .env with the path to your environment variable file.
 
