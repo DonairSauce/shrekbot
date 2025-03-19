@@ -1,6 +1,6 @@
-const {SlashCommandBuilder} = require('@discordjs/builders');
-const {ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection} = require('discord.js');
-const {ButtonStyle} = require('discord.js');
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection } = require('discord.js');
+const { ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
 const ombiIP = process.env.ombiip;
@@ -9,6 +9,10 @@ const ombiToken = process.env.ombitoken;
 const timerExp = process.env.timerexp;
 let objectsWithoutDefault = [];
 const timerManager = new Collection();
+
+const seasonSelections = new Map();
+module.exports.seasonSelections = seasonSelections;
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
@@ -96,7 +100,7 @@ module.exports = {
 		} else {
 			try {
 				console.log('No results found for "' + searchTerm + '"');
-				interaction.reply({content: 'No results available for: "' + searchTerm + '". Please try searching again.', ephemeral: true});
+				interaction.reply({ content: 'No results available for: "' + searchTerm + '". Please try searching again.', ephemeral: true });
 			} catch (err) {
 				console.log(err);
 			}
@@ -117,18 +121,12 @@ module.exports = {
 
 		if (mediaType === 'movie') {
 			isMovie = true;
+			apiSubUrl = '/api/v2/Search/movie/';
 		}
 
 		if (mediaType === 'tv') {
 			isTv = true;
-		}
-
-		if (isTv) {
 			apiSubUrl = '/api/v2/Search/tv/moviedb/';
-		}
-
-		if (isMovie) {
-			apiSubUrl = '/api/v2/Search/movie/';
 		}
 
 		let info;
@@ -145,56 +143,56 @@ module.exports = {
 			console.log(err);
 		}
 
-		const object = {};
+		// Build an object with the TV/movie info
+		const object = {
+			id: info.id,
+			releaseDate: (mediaType === 'movie' ? info.releaseDate : info.firstAired),
+			title: info.title,
+			description: info.overview,
+			image: (mediaType === 'movie' ? info.posterPath : info.banner),
+			imdbID: info.imdbId,
+			available: info.available,
+			requested: info.requested,
+		};
 
-		object.id = info.id;
-		object.releaseDate = (mediaType === 'movie' ? info.releaseDate : info.firstAired);
-		object.title = info.title;
-		object.description = info.overview;
-		object.image = (mediaType === 'movie' ? info.posterPath : info.banner);
-		object.imdbID = info.imdbId;
-		object.available = info.available;
-		object.requested = info.requested;
-
-		const {member} = interaction;
-
+		// Embed builder
 		function showBuilder() {
 			try {
 				const embed = new Discord.EmbedBuilder()
 					.setColor('#0099ff')
 					.setTitle(object.title + (object.releaseDate === null ? '' : (' (' + object.releaseDate.substring(0, 4) + ')')))
 					.setURL('https://imdb.com/title/' + object.imdbID)
-					.setDescription(object.description === undefined ? 'No description' : object.description.substr(0, 255) + '(...)')
+					.setDescription(object.description ? object.description.substr(0, 255) + '(...)' : 'No description')
 					.setImage('https://image.tmdb.org/t/p/original/' + object.image)
 					.setTimestamp()
 					.setFooter({
-						text: 'Searched by ' + member.user.username,
-						iconURL: `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`,
+						text: 'Searched by ' + interaction.member.user.username,
+						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
 
 				if (object.available) {
-					embed.addFields([{name: '__Available__', value: '✅', inline: true}]);
+					embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
 				}
 
 				if (object.requested) {
-					embed.addFields([{name: '__Requested__', value: '✅', inline: true}]);
+					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 				}
 
 				return embed;
 			} catch (err) {
-				console.log('error showBuilder: ' + err);
+				console.log('error in showBuilder: ' + err);
 			}
 		}
 
+		// Timer for auto cleanup
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) {
 				clearTimeout(timerManager.get(messageId));
 			}
-
 			const timer = setTimeout(() => {
 				try {
 					console.log('Search for ' + info.title + ' timed out');
-					interaction.followUp({content: 'Your request for ' + info.title + ' timed out', ephemeral: true});
+					interaction.followUp({ content: 'Your request for ' + info.title + ' timed out', ephemeral: true });
 					interaction.deleteReply();
 				} catch (err) {
 					console.log(err);
@@ -204,6 +202,8 @@ module.exports = {
 		}
 
 		const embedMessage = showBuilder();
+
+		// Build the request button row
 		const row = new ActionRowBuilder()
 			.addComponents(
 				new ButtonBuilder()
@@ -211,38 +211,81 @@ module.exports = {
 					.setStyle(ButtonStyle.Primary)
 					.setLabel('Request'),
 			);
+
+		// Build the dropdown for making another selection
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
 			.addOptions(objectsWithoutDefault);
+		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
 
-		const selectMenu = new ActionRowBuilder()
-			.addComponents(objectSelect);
+		// Build the overall components array. For TV shows, add a season selection dropdown.
+		let componentsArray = [selectMenu, row];
 
-		const availableOrRequested = object.available ? 'Available' : object.requested ? 'Requested' : '';
-		const availableButton = new ButtonBuilder()
-			.setCustomId('mediaAvailable')
-			.setLabel(object.title.substr(0, 58) + ' Is Already ' + availableOrRequested + '!')
-			.setStyle(ButtonStyle.Primary)
-			.setDisabled(true);
+		if (isTv) {
+			const seasonOptions = [
+				{
+					label: 'Request All Seasons',
+					description: 'Request every season of the show',
+					value: 'all',
+				},
+				{
+					label: 'Request Specific Season',
+					description: 'Choose a specific season',
+					value: 'specific',
+				},
+			];
+			// Include the messageId in the customId so we can later map the selection.
+			const seasonSelect = new StringSelectMenuBuilder()
+				.setCustomId('season_selector-' + messageId)
+				.setPlaceholder('Select season option')
+				.addOptions(seasonOptions);
+			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
+			// Insert seasonRow after the selectMenu
+			componentsArray.splice(1, 0, seasonRow);
+		}
+
+		// Send reply/update depending on the interaction state.
 		try {
 			if (interaction.message === undefined) {
 				if (object.requested || object.available) {
-					interaction.reply({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
-						timeOut(interaction, messageId);
+					interaction.reply({
+						embeds: [embedMessage],
+						components: componentsArray.concat([
+							new ActionRowBuilder().addComponents(
+								new ButtonBuilder()
+									.setCustomId('mediaAvailable')
+									.setLabel(object.title.substr(0, 58) + ' Is Already ' + (object.available ? 'Available' : 'Requested') + '!')
+									.setStyle(ButtonStyle.Primary)
+									.setDisabled(true),
+							),
+						]),
+					}).then(() => {
+						timeOut(interaction);
 					});
 				} else {
-					interaction.reply({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
-						timeOut(interaction, messageId);
+					interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => {
+						timeOut(interaction);
 					});
 				}
 			} else if (object.requested || object.available) {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, new ActionRowBuilder().addComponents(availableButton)]}).then(() => {
-					timeOut(interaction, messageId);
+				interaction.update({
+					embeds: [embedMessage],
+					components: componentsArray.concat([
+						new ActionRowBuilder().addComponents(
+							new ButtonBuilder()
+								.setCustomId('mediaAvailable')
+								.setLabel(object.title.substr(0, 58) + ' Is Already ' + (object.available ? 'Available' : 'Requested') + '!')
+								.setStyle(ButtonStyle.Primary)
+								.setDisabled(true),
+						),
+					]),
+				}).then(() => {
+					timeOut(interaction);
 				});
 			} else {
-				interaction.update({embeds: [embedMessage], components: [selectMenu, row]}).then(() => {
-					timeOut(interaction, messageId);
+				interaction.update({ embeds: [embedMessage], components: componentsArray }).then(() => {
+					timeOut(interaction);
 				});
 			}
 		} catch (err) {
@@ -250,22 +293,22 @@ module.exports = {
 		}
 	},
 
-	async sendRequest(interaction, id, mediaType, messageId) {
-		const processing = new ActionRowBuilder()
-			.addComponents(
-				new ButtonBuilder()
-					.setCustomId('processing')
-					.setStyle(ButtonStyle.Success)
-					.setLabel('Your request is processing')
-					.setDisabled(true),
-			);
+	async sendRequest(interaction, id, mediaType, messageId, seasonSelection) {
+		const processing = new ActionRowBuilder().addComponents(
+			new ButtonBuilder()
+				.setCustomId('processing')
+				.setStyle(ButtonStyle.Success)
+				.setLabel('Your request is processing')
+				.setDisabled(true),
+		);
 
 		await interaction.message.edit({
 			components: [processing],
 		});
 		clearTimeout(timerManager.get(messageId));
-		const {member} = interaction;
+		const { member } = interaction;
 		console.log(member.user.username + ' sent a request to Ombi');
+		
 		if (mediaType === 'movie') {
 			try {
 				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v1/Request/movie', {
@@ -276,48 +319,68 @@ module.exports = {
 						ApiKey: ombiToken,
 						ApiAlias: member.user.username + '#' + member.user.discriminator + ',' + member.user.id,
 					},
-
 					body: JSON.stringify({
 						theMovieDbId: id,
 						languageCode: 'en',
 					}),
-				}).then(res => {
-					responseStatus = res.status; // Store the response status in a variable
-					return res.json();
-				}).then(async jsonResponse => {
-					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
-				}).catch(err => {
-					// Handle error
-					console.error(err);
-				});
+				})
+					.then(res => {
+						responseStatus = res.status;
+						return res.json();
+					})
+					.then(async jsonResponse => {
+						await changeButton(responseStatus, jsonResponse);
+					})
+					.catch(err => {
+						console.error(err);
+					});
 			} catch (err) {
 				console.error(err);
 			}
-		} else {
+		} else if (mediaType === 'tv') {
+			// Build the request body based on the season selection.
+			let requestBody = {
+				theMovieDbId: id,
+				languageCode: 'en',
+			};
+
+			// If no specific season was stored or the selection is "all", request all seasons.
+			if (!seasonSelection || seasonSelection === 'all') {
+				requestBody.requestAll = true;
+			} else {
+				// If a specific season number is provided:
+				requestBody.requestAll = false;
+				requestBody.latestSeason = false;
+				requestBody.firstSeason = false;
+				requestBody.seasons = [
+					{
+						seasonNumber: parseInt(seasonSelection, 10),
+						episodes: [] // Request all episodes of that season.
+					}
+				];
+			}
+
 			try {
 				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v2/Requests/tv', {
 					method: 'post',
 					headers: {
 						Accept: 'application/json',
-						'Content-Type': 'text/json',
+						'Content-Type': 'application/json',
 						ApiKey: ombiToken,
 						ApiAlias: member.user.username + '#' + member.user.discriminator + ',' + member.user.id,
 					},
-
-					body: JSON.stringify({
-						theMovieDbId: id,
-						requestAll: true,
-						languageCode: 'en',
-					}),
-				}).then(res => {
-					responseStatus = res.status; // Store the response status in a variable
-					return res.json();
-				}).then(async jsonResponse => {
-					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
-				}).catch(err => {
-					// Handle error
-					console.error(err);
-				});
+					body: JSON.stringify(requestBody),
+				})
+					.then(res => {
+						responseStatus = res.status;
+						return res.json();
+					})
+					.then(async jsonResponse => {
+						await changeButton(responseStatus, jsonResponse);
+					})
+					.catch(err => {
+						console.error(err);
+					});
 			} catch (err) {
 				console.error(err);
 			}
@@ -328,20 +391,18 @@ module.exports = {
 			let success = false;
 			console.log('response code ' + responseStatusCode);
 			success = responseStatusCode >= 200 && responseStatusCode < 300;
-			const row = new ActionRowBuilder()
-				.addComponents(
-					new ButtonBuilder()
-						.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
-						.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
-						.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
-						.setDisabled(true),
-				);
-
+			const row = new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
+					.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
+					.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
+					.setDisabled(true),
+			);
 			await interaction.message.edit({
 				components: [row],
 			});
 		}
 
 		console.log('All done, now get out of my swamp');
-	},
+	}
 };
