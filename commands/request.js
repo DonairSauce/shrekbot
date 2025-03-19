@@ -56,7 +56,7 @@ module.exports = {
 		} catch (err) {
 			console.log(err);
 		}
-
+	
 		if (Object.keys(searchResults).length > 0) {
 			const mediaResults = [];
 			const maxResults = Math.min(10, Object.keys(searchResults).length);
@@ -64,9 +64,17 @@ module.exports = {
 				const o = searchResults[i];
 				mediaResults.push({
 					label: o.title.length > 97 ? o.title.substr(0, 97) + '...' : o.title,
-					description: o.overview.length > 97 ? o.overview.substr(0, 97) + '...' : o.overview,
 					value: `${o.mediaType},${o.id},${messageId},${args}`,
 					emoji: o.mediaType === 'movie' ? '🎥' : '📺',
+					// Only include description if overview is non-empty
+					...(o.overview && o.overview.trim()
+						? {
+								description:
+									o.overview.length > 97
+										? o.overview.substr(0, 97) + '...'
+										: o.overview,
+						  }
+						: {}),
 				});
 			}
 			objectsWithoutDefault = mediaResults;
@@ -74,7 +82,10 @@ module.exports = {
 		} else {
 			console.log(`No results found for "${searchTerm}"`);
 			try {
-				interaction.reply({ content: `No results available for: "${searchTerm}". Please try again.`, ephemeral: true });
+				interaction.reply({
+					content: `No results available for: "${searchTerm}". Please try again.`,
+					ephemeral: true,
+				});
 			} catch (err) {
 				console.log(err);
 			}
