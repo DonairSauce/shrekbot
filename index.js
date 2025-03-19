@@ -59,24 +59,16 @@ client.on('interactionCreate', async interaction => {
 		}
 		// Season selection; expected format: "season_selector-<messageId>"
 		else if (interaction.customId.startsWith('season_selector-')) {
-			const [, messageId] = interaction.customId.split('-');
-			const seasonChoice = interaction.values[0];
-			if (seasonChoice === 'specific') {
-				const modal = new ModalBuilder()
-					.setCustomId(`seasonModal-${messageId}`)
-					.setTitle('Enter Season Number');
-				const seasonInput = new TextInputBuilder()
-					.setCustomId('seasonNumber')
-					.setLabel('Season Number')
-					.setStyle(TextInputStyle.Short)
-					.setPlaceholder('e.g., 3')
-					.setRequired(true);
-				const firstActionRow = new ActionRowBuilder().addComponents(seasonInput);
-				modal.addComponents(firstActionRow);
-				await interaction.showModal(modal);
-			} else {
-				request.seasonSelections.set(messageId, 'all');
+			const parts = interaction.customId.split('-');
+			const messageId = parts[1]; // e.g., "season_selector-<messageId>"
+			const seasonChoice = interaction.values[0]; // Either "all" or a season number (as a string)
+			// Store the user's selection
+			request.seasonSelections.set(messageId, seasonChoice);
+			// Reply with an appropriate message based on the selection
+			if (seasonChoice === 'all') {
 				await interaction.reply({ content: 'You selected all seasons.', ephemeral: true });
+			} else {
+				await interaction.reply({ content: `You selected season ${seasonChoice}.`, ephemeral: true });
 			}
 		}
 	} else if (interaction.type === InteractionType.ModalSubmit) {
