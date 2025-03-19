@@ -114,23 +114,23 @@ module.exports = {
 		const messageId = splitArray[2];
 		const searchQuery = splitArray[3];
 		await this.getSearchResults(interaction, messageId, searchQuery);
-	
+
 		let isMovie = false;
 		let isTv = false;
 		let apiSubUrl;
-	
+
 		if (mediaType === 'movie') {
 			isMovie = true;
 			apiSubUrl = '/api/v2/Search/movie/';
 		}
-	
+
 		if (mediaType === 'tv') {
 			isTv = true;
 			apiSubUrl = '/api/v2/Search/tv/moviedb/';
 		}
-	
+
 		let info;
-	
+
 		try {
 			info = await fetch('http://' + ombiIP + ':' + ombiPort + apiSubUrl + movieDbId, {
 				method: 'get',
@@ -142,7 +142,7 @@ module.exports = {
 		} catch (err) {
 			console.log(err);
 		}
-	
+
 		// Build an object with the TV/movie info
 		const object = {
 			id: info.id,
@@ -154,7 +154,7 @@ module.exports = {
 			available: info.available,
 			requested: info.requested,
 		};
-	
+
 		// Embed builder
 		function showBuilder() {
 			try {
@@ -169,21 +169,21 @@ module.exports = {
 						text: 'Searched by ' + interaction.member.user.username,
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
-	
+
 				if (object.available) {
 					embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
 				}
-	
+
 				if (object.requested) {
 					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 				}
-	
+
 				return embed;
 			} catch (err) {
 				console.log('error in showBuilder: ' + err);
 			}
 		}
-	
+
 		// Timer for auto cleanup
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) {
@@ -200,41 +200,53 @@ module.exports = {
 			}, timerExp);
 			timerManager.set(messageId, timer);
 		}
-	
+
 		const embedMessage = showBuilder();
-	
+
 		// Build the dropdown for making another selection
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
 			.addOptions(objectsWithoutDefault);
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
-	
+
 		// Build the overall components array starting with the select menu
 		let componentsArray = [selectMenu];
-	
+
 		// For TV shows, add a season selection dropdown
 		if (isTv) {
-			const seasonOptions = [
-				{
-					label: 'Request All Seasons',
-					description: 'Request every season of the show',
-					value: 'all',
-				},
-				{
-					label: 'Request Specific Season',
-					description: 'Choose a specific season',
-					value: 'specific',
-				},
-			];
+			// Build season options: first option is "All Seasons"
+			let seasonOptions = [{
+				label: 'All Seasons',
+				description: 'Request every season of the show',
+				value: 'all'
+			}];
+
+			// If the API returned seasonRequests, list each season as an option.
+			if (info.seasonRequests && Array.isArray(info.seasonRequests)) {
+				info.seasonRequests.forEach(seasonObj => {
+					if (typeof seasonObj.seasonNumber !== 'undefined') {
+						seasonOptions.push({
+							label: `Season ${seasonObj.seasonNumber}`,
+							description: `Request Season ${seasonObj.seasonNumber}`,
+							value: seasonObj.seasonNumber.toString()
+						});
+					}
+				});
+			}
+
+			// Create the select menu with default selection "all".
+			// (If your version of discord.js supports setting default values, you can use setDefaultValues.)
 			const seasonSelect = new StringSelectMenuBuilder()
 				.setCustomId('season_selector-' + messageId)
 				.setPlaceholder('Select season option')
-				.addOptions(seasonOptions);
+				.addOptions(seasonOptions)
+				.setDefaultValues(['all']); // This makes "All Seasons" the default selection
+
 			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
 			componentsArray.push(seasonRow);
 		}
-	
+
 		// Add either the Request button or a disabled button if already requested/available
 		if (!(object.requested || object.available)) {
 			// Not requested/available: add the Request button
@@ -256,7 +268,7 @@ module.exports = {
 			);
 			componentsArray.push(disabledRow);
 		}
-	
+
 		// Send reply/update depending on the interaction state.
 		try {
 			if (interaction.message === undefined) {
@@ -288,7 +300,7 @@ module.exports = {
 		clearTimeout(timerManager.get(messageId));
 		const { member } = interaction;
 		console.log(member.user.username + ' sent a request to Ombi');
-		
+
 		if (mediaType === 'movie') {
 			try {
 				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v1/Request/movie', {
