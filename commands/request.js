@@ -11,9 +11,9 @@ let objectsWithoutDefault = [];
 const timerManager = new Collection();
 
 const seasonSelections = new Map();
-module.exports.seasonSelections = seasonSelections;
 
 module.exports = {
+	seasonSelections,
 	data: new SlashCommandBuilder()
 		.setName('request')
 		.setDescription('Request command to add new media to Plex')
