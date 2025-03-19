@@ -114,23 +114,23 @@ module.exports = {
 		const messageId = splitArray[2];
 		const searchQuery = splitArray[3];
 		await this.getSearchResults(interaction, messageId, searchQuery);
-
+	
 		let isMovie = false;
 		let isTv = false;
 		let apiSubUrl;
-
+	
 		if (mediaType === 'movie') {
 			isMovie = true;
 			apiSubUrl = '/api/v2/Search/movie/';
 		}
-
+	
 		if (mediaType === 'tv') {
 			isTv = true;
 			apiSubUrl = '/api/v2/Search/tv/moviedb/';
 		}
-
+	
 		let info;
-
+	
 		try {
 			info = await fetch('http://' + ombiIP + ':' + ombiPort + apiSubUrl + movieDbId, {
 				method: 'get',
@@ -142,7 +142,7 @@ module.exports = {
 		} catch (err) {
 			console.log(err);
 		}
-
+	
 		// Build an object with the TV/movie info
 		const object = {
 			id: info.id,
@@ -154,7 +154,7 @@ module.exports = {
 			available: info.available,
 			requested: info.requested,
 		};
-
+	
 		// Embed builder
 		function showBuilder() {
 			try {
@@ -169,21 +169,21 @@ module.exports = {
 						text: 'Searched by ' + interaction.member.user.username,
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
-
+	
 				if (object.available) {
 					embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
 				}
-
+	
 				if (object.requested) {
 					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 				}
-
+	
 				return embed;
 			} catch (err) {
 				console.log('error in showBuilder: ' + err);
 			}
 		}
-
+	
 		// Timer for auto cleanup
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) {
@@ -200,28 +200,20 @@ module.exports = {
 			}, timerExp);
 			timerManager.set(messageId, timer);
 		}
-
+	
 		const embedMessage = showBuilder();
-
-		// Build the request button row
-		const row = new ActionRowBuilder()
-			.addComponents(
-				new ButtonBuilder()
-					.setCustomId('request-button-' + movieDbId + '-' + mediaType + '-' + messageId)
-					.setStyle(ButtonStyle.Primary)
-					.setLabel('Request'),
-			);
-
+	
 		// Build the dropdown for making another selection
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
 			.addOptions(objectsWithoutDefault);
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
-
-		// Build the overall components array. For TV shows, add a season selection dropdown.
-		let componentsArray = [selectMenu, row];
-
+	
+		// Build the overall components array starting with the select menu
+		let componentsArray = [selectMenu];
+	
+		// For TV shows, add a season selection dropdown
 		if (isTv) {
 			const seasonOptions = [
 				{
@@ -235,52 +227,40 @@ module.exports = {
 					value: 'specific',
 				},
 			];
-			// Include the messageId in the customId so we can later map the selection.
 			const seasonSelect = new StringSelectMenuBuilder()
 				.setCustomId('season_selector-' + messageId)
 				.setPlaceholder('Select season option')
 				.addOptions(seasonOptions);
 			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
-			// Insert seasonRow after the selectMenu
-			componentsArray.splice(1, 0, seasonRow);
+			componentsArray.push(seasonRow);
 		}
-
+	
+		// Add either the Request button or a disabled button if already requested/available
+		if (!(object.requested || object.available)) {
+			// Not requested/available: add the Request button
+			const requestRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId('request-button-' + movieDbId + '-' + mediaType + '-' + messageId)
+					.setStyle(ButtonStyle.Primary)
+					.setLabel('Request'),
+			);
+			componentsArray.push(requestRow);
+		} else {
+			// Already requested/available: add a disabled button
+			const disabledRow = new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId('mediaAvailable')
+					.setLabel(object.title.substr(0, 58) + ' Is Already ' + (object.available ? 'Available' : 'Requested') + '!')
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(true),
+			);
+			componentsArray.push(disabledRow);
+		}
+	
 		// Send reply/update depending on the interaction state.
 		try {
 			if (interaction.message === undefined) {
-				if (object.requested || object.available) {
-					interaction.reply({
-						embeds: [embedMessage],
-						components: componentsArray.concat([
-							new ActionRowBuilder().addComponents(
-								new ButtonBuilder()
-									.setCustomId('mediaAvailable')
-									.setLabel(object.title.substr(0, 58) + ' Is Already ' + (object.available ? 'Available' : 'Requested') + '!')
-									.setStyle(ButtonStyle.Primary)
-									.setDisabled(true),
-							),
-						]),
-					}).then(() => {
-						timeOut(interaction);
-					});
-				} else {
-					interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => {
-						timeOut(interaction);
-					});
-				}
-			} else if (object.requested || object.available) {
-				interaction.update({
-					embeds: [embedMessage],
-					components: componentsArray.concat([
-						new ActionRowBuilder().addComponents(
-							new ButtonBuilder()
-								.setCustomId('mediaAvailable')
-								.setLabel(object.title.substr(0, 58) + ' Is Already ' + (object.available ? 'Available' : 'Requested') + '!')
-								.setStyle(ButtonStyle.Primary)
-								.setDisabled(true),
-						),
-					]),
-				}).then(() => {
+				interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => {
 					timeOut(interaction);
 				});
 			} else {
