@@ -215,11 +215,12 @@ module.exports = {
 
 		// For TV shows, add a season selection dropdown
 		if (isTv) {
-			// Build season options: first option is "All Seasons"
+			// Build season options: first option is "All Seasons" with default: true
 			let seasonOptions = [{
 				label: 'All Seasons',
 				description: 'Request every season of the show',
-				value: 'all'
+				value: 'all',
+				default: true
 			}];
 
 			// If the API returned seasonRequests, list each season as an option.
@@ -235,13 +236,10 @@ module.exports = {
 				});
 			}
 
-			// Create the select menu with default selection "all".
-			// (If your version of discord.js supports setting default values, you can use setDefaultValues.)
 			const seasonSelect = new StringSelectMenuBuilder()
 				.setCustomId('season_selector-' + messageId)
 				.setPlaceholder('Select season option')
-				.addOptions(seasonOptions)
-				.setDefaultValues(['all']); // This makes "All Seasons" the default selection
+				.addOptions(seasonOptions);
 
 			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
 			componentsArray.push(seasonRow);
