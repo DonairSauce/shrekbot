@@ -17,9 +17,11 @@ const timerExp = process.env.timerexp;
 let objectsWithoutDefault = [];
 const timerManager = new Collection();
 const seasonSelections = new Map();
+const availableSeasons = new Map();
 
 module.exports = {
 	seasonSelections,
+	availableSeasons,
 	data: new SlashCommandBuilder()
 		.setName('request')
 		.setDescription('Request command to add new media to Plex')
@@ -167,30 +169,51 @@ module.exports = {
 		let componentsArray = [selectMenu];
 
 		if (isTv) {
+			// Build season options starting with "All Seasons"
 			let seasonOptions = [{
 				label: 'All Seasons',
 				description: 'Request every season of the show',
 				value: 'all',
 				default: true,
 			}];
+		
+			let additionalSeasonOptions = [];
+			let available = []; // List of available season numbers
 			if (info.seasonRequests && Array.isArray(info.seasonRequests)) {
 				info.seasonRequests.forEach(seasonObj => {
 					if (typeof seasonObj.seasonNumber !== 'undefined') {
-						seasonOptions.push({
+						additionalSeasonOptions.push({
 							label: `Season ${seasonObj.seasonNumber}`,
 							description: `Request Season ${seasonObj.seasonNumber}`,
 							value: seasonObj.seasonNumber.toString(),
 						});
+						available.push(seasonObj.seasonNumber);
 					}
 				});
 			}
+			// If too many options, limit additional options and add "Other"
+			if (additionalSeasonOptions.length > 23) {
+				additionalSeasonOptions = additionalSeasonOptions.slice(0, 23);
+				additionalSeasonOptions.push({
+					label: 'Other...',
+					description: 'Request a season not listed',
+					value: 'other',
+				});
+			}
+			seasonOptions = seasonOptions.concat(additionalSeasonOptions);
+		
+			// Store available season numbers for validation
+			availableSeasons.set(messageId, available);
+		
 			const seasonSelect = new StringSelectMenuBuilder()
 				.setCustomId(`season_selector-${messageId}`)
-				.setPlaceholder('Select season option')
-				.addOptions(seasonOptions);
+				.setPlaceholder('Select season option(s)')
+				.addOptions(seasonOptions)
+				.setMinValues(1)
+				.setMaxValues(seasonOptions.length);
 			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
 			componentsArray.push(seasonRow);
-		}
+		}				
 
 		if (!(object.requested || object.available)) {
 			const requestRow = new ActionRowBuilder().addComponents(
@@ -237,7 +260,7 @@ module.exports = {
 		clearTimeout(timerManager.get(messageId));
 		const { member } = interaction;
 		console.log(`${member.user.username} sent a request to Ombi`);
-
+	
 		if (mediaType === 'movie') {
 			try {
 				fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/movie`, {
@@ -268,17 +291,22 @@ module.exports = {
 			}
 		} else if (mediaType === 'tv') {
 			let requestBody = { theMovieDbId: id, languageCode: 'en' };
-			if (!seasonSelection || seasonSelection === 'all') {
-				requestBody.requestAll = true;
+			if (Array.isArray(seasonSelection)) {
+				if (seasonSelection.includes('all')) {
+					requestBody.requestAll = true;
+				} else {
+					requestBody.requestAll = false;
+					requestBody.latestSeason = false;
+					requestBody.firstSeason = false;
+					requestBody.seasons = seasonSelection.map(s => ({
+						seasonNumber: parseInt(s, 10),
+						episodes: []
+					}));
+				}
 			} else {
-				requestBody.requestAll = false;
-				requestBody.latestSeason = false;
-				requestBody.firstSeason = false;
-				requestBody.seasons = [{
-					seasonNumber: parseInt(seasonSelection, 10),
-					episodes: []
-				}];
+				requestBody.requestAll = true;
 			}
+	
 			try {
 				fetch(`http://${ombiIP}:${ombiPort}/api/v2/Requests/tv`, {
 					method: 'post',

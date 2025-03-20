@@ -57,26 +57,72 @@ client.on('interactionCreate', async interaction => {
 		if (interaction.customId === 'media_selector') {
 			request.search(interaction.values[0], interaction);
 		}
-		// Season selection; expected format: "season_selector-<messageId>"
+		// Season selection; expected customId format: "season_selector-<messageId>"
 		else if (interaction.customId.startsWith('season_selector-')) {
 			const parts = interaction.customId.split('-');
-			const messageId = parts[1]; // e.g., "season_selector-<messageId>"
-			const seasonChoice = interaction.values[0]; // Either "all" or a season number (as a string)
-			// Store the user's selection
-			request.seasonSelections.set(messageId, seasonChoice);
-			// Reply with an appropriate message based on the selection
-			if (seasonChoice === 'all') {
-				await interaction.reply({ content: 'You selected all seasons.', ephemeral: true });
+			const messageId = parts[1];
+			const seasonChoices = interaction.values; // This is now an array
+
+			if (seasonChoices.includes('other')) {
+				// Show modal for custom season input
+				const modal = new ModalBuilder()
+					.setCustomId(`seasonModal-${messageId}`)
+					.setTitle('Enter Season Numbers');
+				const seasonInput = new TextInputBuilder()
+					.setCustomId('seasonNumbers')
+					.setLabel('Season Numbers')
+					.setStyle(TextInputStyle.Short)
+					.setPlaceholder('e.g., 1,3,5 or 1-3')
+					.setRequired(true);
+				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
+				modal.addComponents(actionRow);
+				await interaction.showModal(modal);
 			} else {
-				await interaction.reply({ content: `You selected season ${seasonChoice}.`, ephemeral: true });
+				// Store the selected array and reply with all chosen seasons
+				request.seasonSelections.set(messageId, seasonChoices);
+				await interaction.reply({
+					content: `You selected season(s): ${seasonChoices.join(', ')}.`,
+					ephemeral: true,
+				});
 			}
 		}
 	} else if (interaction.type === InteractionType.ModalSubmit) {
 		if (interaction.customId.startsWith('seasonModal-')) {
 			const [, messageId] = interaction.customId.split('-');
-			const seasonNumber = interaction.fields.getTextInputValue('seasonNumber');
-			request.seasonSelections.set(messageId, seasonNumber);
-			await interaction.reply({ content: `You selected season ${seasonNumber}.`, ephemeral: true });
+			const input = interaction.fields.getTextInputValue('seasonNumbers').trim();
+			let seasonNumbers = [];
+			// Support range format "1-3"
+			if (input.includes('-')) {
+				const [start, end] = input.split('-').map(Number);
+				if (!isNaN(start) && !isNaN(end) && start <= end) {
+					for (let i = start; i <= end; i++) {
+						seasonNumbers.push(i.toString());
+					}
+				}
+			} else if (input.includes(',')) {
+				seasonNumbers = input.split(',').map(s => s.trim());
+			} else {
+				seasonNumbers = [input];
+			}
+
+			// Validate against available seasons
+			const available = request.availableSeasons.get(messageId) || [];
+			const availableStr = available.map(num => num.toString());
+			const invalid = seasonNumbers.filter(s => !availableStr.includes(s));
+			if (invalid.length > 0) {
+				await interaction.reply({
+					content: `Invalid season(s): ${invalid.join(', ')}. Available seasons: ${availableStr.join(', ')}.`,
+					ephemeral: true,
+				});
+				return;
+			}
+
+			// Store the valid selection and confirm
+			request.seasonSelections.set(messageId, seasonNumbers);
+			await interaction.reply({
+				content: `You selected season(s): ${seasonNumbers.join(', ')}.`,
+				ephemeral: true,
+			});
 		}
 	} else if (interaction.isButton()) {
 		if (interaction.customId.includes('-button') && interaction.customId.includes('request')) {
@@ -86,7 +132,8 @@ client.on('interactionCreate', async interaction => {
 				const mediaType = parts[3];
 				const messageId = parts[4];
 				interaction.deferUpdate();
-				const seasonSelection = request.seasonSelections.get(messageId) || 'all';
+				// Retrieve stored selection; default to ['all'] if none
+				const seasonSelection = request.seasonSelections.get(messageId) || ['all'];
 				await request.sendRequest(interaction, id, mediaType, messageId, seasonSelection);
 			} catch (error) {
 				console.error(error);
