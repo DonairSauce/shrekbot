@@ -61,10 +61,9 @@ client.on('interactionCreate', async interaction => {
 		else if (interaction.customId.startsWith('season_selector-')) {
 			const parts = interaction.customId.split('-');
 			const messageId = parts[1];
-			const seasonChoices = interaction.values; // This is now an array
-
+			const seasonChoices = interaction.values; // Array of selected values
 			if (seasonChoices.includes('other')) {
-				// Show modal for custom season input
+				// Show modal for custom input if "Other..." is selected.
 				const modal = new ModalBuilder()
 					.setCustomId(`seasonModal-${messageId}`)
 					.setTitle('Enter Season Numbers');
@@ -78,14 +77,14 @@ client.on('interactionCreate', async interaction => {
 				modal.addComponents(actionRow);
 				await interaction.showModal(modal);
 			} else {
-				// Store the selected array and reply with all chosen seasons
+				// Store the selected season values (an array)
 				request.seasonSelections.set(messageId, seasonChoices);
 				await interaction.reply({
 					content: `You selected season(s): ${seasonChoices.join(', ')}.`,
 					ephemeral: true,
 				});
 			}
-		}
+		}		
 	} else if (interaction.type === InteractionType.ModalSubmit) {
 		if (interaction.customId.startsWith('seasonModal-')) {
 			const [, messageId] = interaction.customId.split('-');
@@ -104,8 +103,8 @@ client.on('interactionCreate', async interaction => {
 			} else {
 				seasonNumbers = [input];
 			}
-
-			// Validate against available seasons
+	
+			// Validate input against available seasons
 			const available = request.availableSeasons.get(messageId) || [];
 			const availableStr = available.map(num => num.toString());
 			const invalid = seasonNumbers.filter(s => !availableStr.includes(s));
@@ -116,8 +115,8 @@ client.on('interactionCreate', async interaction => {
 				});
 				return;
 			}
-
-			// Store the valid selection and confirm
+	
+			// Store the valid selection
 			request.seasonSelections.set(messageId, seasonNumbers);
 			await interaction.reply({
 				content: `You selected season(s): ${seasonNumbers.join(', ')}.`,
