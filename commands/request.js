@@ -18,10 +18,12 @@ let objectsWithoutDefault = [];
 const timerManager = new Collection();
 const seasonSelections = new Map();
 const availableSeasons = new Map();
+const remainingSeasons = new Map();
 
 module.exports = {
 	seasonSelections,
 	availableSeasons,
+	remainingSeasons,
 	data: new SlashCommandBuilder()
 		.setName('request')
 		.setDescription('Request command to add new media to Plex')
@@ -120,21 +122,21 @@ module.exports = {
 			requested: info.requested,
 		};
 
-		// If it's a TV show, store available season numbers for later validation.
+		// For TV shows, compute full and remaining seasons.
 		if (isTv) {
-			let available = [];
-			if (info.seasonRequests && Array.isArray(info.seasonRequests)) {
-				info.seasonRequests.forEach(seasonObj => {
-					if (typeof seasonObj.seasonNumber !== 'undefined') {
-						available.push(seasonObj.seasonNumber);
-					}
-				});
-			}
-			// Store available seasons by messageId.
-			this.availableSeasons.set(messageId, available);
+			const totalSeasons = info.totalSeasons || (info.seasonRequests && info.seasonRequests.length > 0
+				? Math.max(...info.seasonRequests.map(s => s.seasonNumber))
+				: 0);
+			const fullSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+			const alreadyRequested = info.seasonRequests && Array.isArray(info.seasonRequests)
+				? info.seasonRequests.map(s => s.seasonNumber)
+				: [];
+			const remaining = fullSeasons.filter(s => !alreadyRequested.includes(s));
+			this.availableSeasons.set(messageId, fullSeasons);
+			this.remainingSeasons.set(messageId, remaining);
 		}
 
-		// Build embed message
+		// Build embed
 		function showBuilder() {
 			try {
 				const embed = new Discord.EmbedBuilder()
@@ -176,7 +178,7 @@ module.exports = {
 
 		const embedMessage = showBuilder();
 
-		// Build the components array with only the media selection and the Request button.
+		// Build components array 
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
@@ -184,23 +186,47 @@ module.exports = {
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
 		let componentsArray = [selectMenu];
 
-		if (!(object.requested || object.available)) {
-			const requestRow = new ActionRowBuilder().addComponents(
-				new ButtonBuilder()
-					.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
-					.setStyle(ButtonStyle.Primary)
-					.setLabel('Request')
-			);
-			componentsArray.push(requestRow);
+		if (isTv) {
+			// For TV shows, enable the Request button if there are remaining seasons.
+			const remaining = this.remainingSeasons.get(messageId) || [];
+			if (remaining.length === 0) {
+				const disabledRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder()
+						.setCustomId('mediaAvailable')
+						.setLabel(`${object.title.substr(0, 58)} Is Already Requested!`)
+						.setStyle(ButtonStyle.Primary)
+						.setDisabled(true)
+				);
+				componentsArray.push(disabledRow);
+			} else {
+				const requestRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder()
+						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
+						.setStyle(ButtonStyle.Primary)
+						.setLabel('Request')
+				);
+				componentsArray.push(requestRow);
+			}
 		} else {
-			const disabledRow = new ActionRowBuilder().addComponents(
-				new ButtonBuilder()
-					.setCustomId('mediaAvailable')
-					.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
-					.setStyle(ButtonStyle.Primary)
-					.setDisabled(true)
-			);
-			componentsArray.push(disabledRow);
+			// For movies
+			if (!(object.requested || object.available)) {
+				const requestRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder()
+						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
+						.setStyle(ButtonStyle.Primary)
+						.setLabel('Request')
+				);
+				componentsArray.push(requestRow);
+			} else {
+				const disabledRow = new ActionRowBuilder().addComponents(
+					new ButtonBuilder()
+						.setCustomId('mediaAvailable')
+						.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
+						.setStyle(ButtonStyle.Primary)
+						.setDisabled(true)
+				);
+				componentsArray.push(disabledRow);
+			}
 		}
 
 		try {

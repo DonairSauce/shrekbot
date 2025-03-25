@@ -63,18 +63,16 @@ client.on('interactionCreate', async interaction => {
 			const mediaType = parts[3];
 			const messageId = parts[4];
 			if (mediaType === 'tv') {
-				// For TV shows, show a modal to choose seasons.
-				// Retrieve available seasons stored earlier in request.js
-				const available = request.availableSeasons.get(messageId) || [];
-				const totalSeasons = available.length;
+				// Retrieve remaining seasons from request.js
+				const remaining = request.remainingSeasons.get(messageId) || [];
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('Select Seasons');
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					.setLabel(`Seasons (Available: ${totalSeasons})`)
+					.setLabel(`Enter seasons (Remaining: ${remaining.join(', ')})`)
 					.setStyle(TextInputStyle.Short)
-					.setPlaceholder('All Seasons')
+					.setPlaceholder(`All Seasons or e.g., ${remaining.join(', ')}`)
 					.setValue('All Seasons')
 					.setRequired(true);
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
@@ -94,7 +92,6 @@ client.on('interactionCreate', async interaction => {
 			const id = parts[2];
 			const mediaType = parts[3];
 			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
-			console.log("Modal input:", input);
 			let seasonNumbers = [];
 			if (input.toLowerCase() === 'all seasons') {
 				seasonNumbers = ['all'];
@@ -114,13 +111,13 @@ client.on('interactionCreate', async interaction => {
 				}
 			}
 	
-			// Validate input: each season must be within available seasons.
-			const available = request.availableSeasons.get(messageId) || [];
-			const availableStr = available.map(num => num.toString());
-			const invalid = seasonNumbers.filter(s => s !== 'all' && !availableStr.includes(s));
+			// Validate input against remaining seasons.
+			const remaining = request.remainingSeasons.get(messageId) || [];
+			const remainingStr = remaining.map(num => num.toString());
+			const invalid = seasonNumbers.filter(s => s !== 'all' && !remainingStr.includes(s));
 			if (invalid.length > 0) {
 				await interaction.reply({
-					content: `Invalid season(s): ${invalid.join(', ')}. Available: ${availableStr.join(', ')}.`,
+					content: `Invalid season(s): ${invalid.join(', ')}. Remaining seasons: ${remainingStr.join(', ')}.`,
 					ephemeral: true,
 				});
 				return;
