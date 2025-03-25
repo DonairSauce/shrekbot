@@ -68,7 +68,7 @@ client.on('interactionCreate', async interaction => {
 				const available = request.availableSeasons.get(messageId) || [];
 				const totalSeasons = available.length;
 				const modal = new ModalBuilder()
-					.setCustomId(`tvSeasonModal-${messageId}-${id}-${mediaType}`)
+					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('Select Seasons');
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
@@ -87,14 +87,14 @@ client.on('interactionCreate', async interaction => {
 			}
 		}
 	} else if (interaction.type === InteractionType.ModalSubmit) {
-		// Handle TV season modal submission
-		if (interaction.customId.startsWith('tvSeasonModal-')) {
-			// Expected customId: tvSeasonModal-<messageId>-<id>-<mediaType>
-			const parts = interaction.customId.split('-');
+		// Handle TV season modal submission using "::" as the delimiter
+		if (interaction.customId.startsWith('tvSeasonModal::')) {
+			const parts = interaction.customId.split('::');
 			const messageId = parts[1];
 			const id = parts[2];
 			const mediaType = parts[3];
 			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
+			console.log("Modal input:", input);
 			let seasonNumbers = [];
 			if (input.toLowerCase() === 'all seasons') {
 				seasonNumbers = ['all'];
@@ -113,7 +113,7 @@ client.on('interactionCreate', async interaction => {
 					seasonNumbers = [input];
 				}
 			}
-
+	
 			// Validate input: each season must be within available seasons.
 			const available = request.availableSeasons.get(messageId) || [];
 			const availableStr = available.map(num => num.toString());
@@ -125,7 +125,7 @@ client.on('interactionCreate', async interaction => {
 				});
 				return;
 			}
-
+	
 			// Store valid selection and inform user.
 			request.seasonSelections.set(messageId, seasonNumbers);
 			await interaction.reply({
@@ -135,7 +135,7 @@ client.on('interactionCreate', async interaction => {
 			// Proceed to send the request with the chosen seasons.
 			await request.sendRequest(interaction, id, mediaType, messageId, seasonNumbers);
 		}
-	}
+	}	
 });
 
 client.login(token);
