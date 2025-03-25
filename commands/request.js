@@ -58,7 +58,7 @@ module.exports = {
 		} catch (err) {
 			console.log(err);
 		}
-	
+
 		if (Object.keys(searchResults).length > 0) {
 			const mediaResults = [];
 			const maxResults = Math.min(10, Object.keys(searchResults).length);
@@ -71,11 +71,11 @@ module.exports = {
 					// Only include description if overview is non-empty
 					...(o.overview && o.overview.trim()
 						? {
-								description:
-									o.overview.length > 97
-										? o.overview.substr(0, 97) + '...'
-										: o.overview,
-						  }
+							description:
+								o.overview.length > 97
+									? o.overview.substr(0, 97) + '...'
+									: o.overview,
+						}
 						: {}),
 				});
 			}
@@ -120,6 +120,21 @@ module.exports = {
 			requested: info.requested,
 		};
 
+		// If it's a TV show, store available season numbers for later validation.
+		if (isTv) {
+			let available = [];
+			if (info.seasonRequests && Array.isArray(info.seasonRequests)) {
+				info.seasonRequests.forEach(seasonObj => {
+					if (typeof seasonObj.seasonNumber !== 'undefined') {
+						available.push(seasonObj.seasonNumber);
+					}
+				});
+			}
+			// Store available seasons by messageId.
+			this.availableSeasons.set(messageId, available);
+		}
+
+		// Build embed message
 		function showBuilder() {
 			try {
 				const embed = new Discord.EmbedBuilder()
@@ -161,66 +176,13 @@ module.exports = {
 
 		const embedMessage = showBuilder();
 
+		// Build the components array with only the media selection and the Request button.
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
 			.addOptions(objectsWithoutDefault);
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
 		let componentsArray = [selectMenu];
-
-		if (isTv) {
-			// Build season options with "All Seasons" first and "Other..." second.
-			let seasonOptions = [
-				{
-					label: 'All Seasons',
-					description: 'Request every season of the show',
-					value: 'all',
-					default: true,
-				},
-				{
-					label: 'Other...',
-					description: 'Request a season not listed',
-					value: 'other',
-				}
-			];
-		
-			let additionalSeasonOptions = [];
-			let available = []; // Store available season numbers
-			if (info.seasonRequests && Array.isArray(info.seasonRequests)) {
-				info.seasonRequests.forEach(seasonObj => {
-					if (typeof seasonObj.seasonNumber !== 'undefined') {
-						additionalSeasonOptions.push({
-							label: `Season ${seasonObj.seasonNumber}`,
-							description: `Request Season ${seasonObj.seasonNumber}`,
-							value: seasonObj.seasonNumber.toString(),
-						});
-						available.push(seasonObj.seasonNumber);
-					}
-				});
-			}
-		
-			// Sort additional options by season number ascending
-			additionalSeasonOptions.sort((a, b) => parseInt(a.value) - parseInt(b.value));
-		
-			// Limit additional options so total options do not exceed 25 (keeping "All Seasons" and "Other..." intact)
-			const maxAdditional = 25 - 2;
-			if (additionalSeasonOptions.length > maxAdditional) {
-				additionalSeasonOptions = additionalSeasonOptions.slice(0, maxAdditional);
-			}
-			seasonOptions = seasonOptions.concat(additionalSeasonOptions);
-		
-			// Store the available seasons for later validation
-			availableSeasons.set(messageId, available);
-		
-			const seasonSelect = new StringSelectMenuBuilder()
-				.setCustomId(`season_selector-${messageId}`)
-				.setPlaceholder('Select season option(s)')
-				.addOptions(seasonOptions)
-				.setMinValues(1)
-				.setMaxValues(seasonOptions.length);
-			const seasonRow = new ActionRowBuilder().addComponents(seasonSelect);
-			componentsArray.push(seasonRow);
-		}						
 
 		if (!(object.requested || object.available)) {
 			const requestRow = new ActionRowBuilder().addComponents(
@@ -256,17 +218,21 @@ module.exports = {
 		}
 	},
 	async sendRequest(interaction, id, mediaType, messageId, seasonSelection) {
-		// (Processing code remains the same until TV section.)
-		if (mediaType === 'tv') {
-			// Ensure mutual exclusion: if "all" is selected alongside others, override to only "all"
-			if (Array.isArray(seasonSelection)) {
-				if (seasonSelection.includes('all') && seasonSelection.length > 1) {
-					seasonSelection = ['all'];
-				} else if (!seasonSelection.includes('all') && seasonSelection.length > 1) {
-					seasonSelection = seasonSelection.filter(s => s !== 'all');
-				}
-			}
-			
+		const processing = new ActionRowBuilder().addComponents(
+			new ButtonBuilder()
+				.setCustomId('processing')
+				.setStyle(ButtonStyle.Success)
+				.setLabel('Your request is processing')
+				.setDisabled(true)
+		);
+		await interaction.message.edit({ components: [processing] });
+		clearTimeout(timerManager.get(messageId));
+		const { member } = interaction;
+		console.log(`${member.user.username} sent a request to Ombi`);
+
+		if (mediaType === 'movie') {
+			// (Movie request)
+		} else if (mediaType === 'tv') {
 			let requestBody = { theMovieDbId: id, languageCode: 'en' };
 			if (Array.isArray(seasonSelection)) {
 				if (seasonSelection.includes('all')) {
@@ -283,7 +249,7 @@ module.exports = {
 			} else {
 				requestBody.requestAll = true;
 			}
-	
+
 			try {
 				fetch(`http://${ombiIP}:${ombiPort}/api/v2/Requests/tv`, {
 					method: 'post',
@@ -309,6 +275,7 @@ module.exports = {
 				console.error(err);
 			}
 		}
+
 		async function changeButton(responseStatusCode, jsonResponse) {
 			console.log(jsonResponse);
 			const success = responseStatusCode >= 200 && responseStatusCode < 300;

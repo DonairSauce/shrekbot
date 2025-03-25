@@ -53,90 +53,87 @@ client.on('interactionCreate', async interaction => {
 			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 		}
 	} else if (interaction.isStringSelectMenu()) {
-		// Media selection
 		if (interaction.customId === 'media_selector') {
 			request.search(interaction.values[0], interaction);
 		}
-		// Season selection; expected customId format: "season_selector-<messageId>"
-		else if (interaction.customId.startsWith('season_selector-')) {
-			const parts = interaction.customId.split('-');
-			const messageId = parts[1];
-			const seasonChoices = interaction.values; // Array of selected values
-			if (seasonChoices.includes('other')) {
-				// Show modal for custom input if "Other..." is selected.
+	} else if (interaction.isButton()) {
+		if (interaction.customId.includes('-button') && interaction.customId.includes('request')) {
+			const parts = interaction.customId.split('-'); // Format: request-button-<id>-<mediaType>-<messageId>
+			const id = parts[2];
+			const mediaType = parts[3];
+			const messageId = parts[4];
+			if (mediaType === 'tv') {
+				// For TV shows, show a modal to choose seasons.
+				// Retrieve available seasons stored earlier in request.js
+				const available = request.availableSeasons.get(messageId) || [];
+				const totalSeasons = available.length;
 				const modal = new ModalBuilder()
-					.setCustomId(`seasonModal-${messageId}`)
-					.setTitle('Enter Season Numbers');
+					.setCustomId(`tvSeasonModal-${messageId}-${id}-${mediaType}`)
+					.setTitle('Select Seasons');
 				const seasonInput = new TextInputBuilder()
-					.setCustomId('seasonNumbers')
-					.setLabel('Season Numbers')
+					.setCustomId('tvSeasonNumbers')
+					.setLabel(`Seasons (Available: ${totalSeasons})`)
 					.setStyle(TextInputStyle.Short)
-					.setPlaceholder('e.g., 1,3,5 or 1-3')
+					.setPlaceholder('All Seasons')
+					.setValue('All Seasons')
 					.setRequired(true);
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
 				await interaction.showModal(modal);
 			} else {
-				// Store the selected season values (an array)
-				request.seasonSelections.set(messageId, seasonChoices);
-				await interaction.reply({
-					content: `You selected season(s): ${seasonChoices.join(', ')}.`,
-					ephemeral: true,
-				});
+				// For movies, proceed directly.
+				interaction.deferUpdate();
+				await request.sendRequest(interaction, id, mediaType, messageId, '');
 			}
-		}		
+		}
 	} else if (interaction.type === InteractionType.ModalSubmit) {
-		if (interaction.customId.startsWith('seasonModal-')) {
-			const [, messageId] = interaction.customId.split('-');
-			const input = interaction.fields.getTextInputValue('seasonNumbers').trim();
+		// Handle TV season modal submission
+		if (interaction.customId.startsWith('tvSeasonModal-')) {
+			// Expected customId: tvSeasonModal-<messageId>-<id>-<mediaType>
+			const parts = interaction.customId.split('-');
+			const messageId = parts[1];
+			const id = parts[2];
+			const mediaType = parts[3];
+			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
 			let seasonNumbers = [];
-			// Support range format "1-3"
-			if (input.includes('-')) {
-				const [start, end] = input.split('-').map(Number);
-				if (!isNaN(start) && !isNaN(end) && start <= end) {
-					for (let i = start; i <= end; i++) {
-						seasonNumbers.push(i.toString());
-					}
-				}
-			} else if (input.includes(',')) {
-				seasonNumbers = input.split(',').map(s => s.trim());
+			if (input.toLowerCase() === 'all seasons') {
+				seasonNumbers = ['all'];
 			} else {
-				seasonNumbers = [input];
+				// Support range "1-3" or comma-separated "1,3,5"
+				if (input.includes('-')) {
+					const [start, end] = input.split('-').map(Number);
+					if (!isNaN(start) && !isNaN(end) && start <= end) {
+						for (let i = start; i <= end; i++) {
+							seasonNumbers.push(i.toString());
+						}
+					}
+				} else if (input.includes(',')) {
+					seasonNumbers = input.split(',').map(s => s.trim());
+				} else {
+					seasonNumbers = [input];
+				}
 			}
-	
-			// Validate input against available seasons
+
+			// Validate input: each season must be within available seasons.
 			const available = request.availableSeasons.get(messageId) || [];
 			const availableStr = available.map(num => num.toString());
-			const invalid = seasonNumbers.filter(s => !availableStr.includes(s));
+			const invalid = seasonNumbers.filter(s => s !== 'all' && !availableStr.includes(s));
 			if (invalid.length > 0) {
 				await interaction.reply({
-					content: `Invalid season(s): ${invalid.join(', ')}. Available seasons: ${availableStr.join(', ')}.`,
+					content: `Invalid season(s): ${invalid.join(', ')}. Available: ${availableStr.join(', ')}.`,
 					ephemeral: true,
 				});
 				return;
 			}
-	
-			// Store the valid selection
+
+			// Store valid selection and inform user.
 			request.seasonSelections.set(messageId, seasonNumbers);
 			await interaction.reply({
 				content: `You selected season(s): ${seasonNumbers.join(', ')}.`,
 				ephemeral: true,
 			});
-		}
-	} else if (interaction.isButton()) {
-		if (interaction.customId.includes('-button') && interaction.customId.includes('request')) {
-			try {
-				const parts = interaction.customId.split('-');
-				const id = parts[2];
-				const mediaType = parts[3];
-				const messageId = parts[4];
-				interaction.deferUpdate();
-				// Retrieve stored selection; default to ['all'] if none
-				const seasonSelection = request.seasonSelections.get(messageId) || ['all'];
-				await request.sendRequest(interaction, id, mediaType, messageId, seasonSelection);
-			} catch (error) {
-				console.error(error);
-			}
+			// Proceed to send the request with the chosen seasons.
+			await request.sendRequest(interaction, id, mediaType, messageId, seasonNumbers);
 		}
 	}
 });
