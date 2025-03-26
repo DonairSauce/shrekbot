@@ -124,28 +124,26 @@ module.exports = {
 
 		// For TV shows, compute full and remaining seasons.
 		if (isTv) {
-			let totalSeasons;
-			if (info.totalSeasons) {
-				totalSeasons = info.totalSeasons;
-			} else if (info.seasonRequests && info.seasonRequests.length > 0) {
-				totalSeasons = Math.max(...info.seasonRequests.map(s => s.seasonNumber));
-			} else {
-				// If no season info is provided, we cannot compute full seasons.
-				// In this case, we'll assume the user can request manually.
-				totalSeasons = 0;
+			// Try to determine the total number of seasons.
+			let totalSeasons = info.totalSeasons;
+			if (!totalSeasons && info.childRequest && info.childRequest.parentRequest && info.childRequest.parentRequest.totalSeasons) {
+				totalSeasons = info.childRequest.parentRequest.totalSeasons;
 			}
 			let fullSeasons = [];
-			if (totalSeasons > 0) {
+			let remaining = [];
+			if (totalSeasons && totalSeasons > 0) {
+				// Create a list of all seasons [1, 2, ..., totalSeasons]
 				fullSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+				// Extract already requested season numbers from seasonRequests.
+				const alreadyRequested = info.seasonRequests && Array.isArray(info.seasonRequests)
+					? info.seasonRequests.map(s => s.seasonNumber)
+					: [];
+				// Remaining seasons are those not already requested.
+				remaining = fullSeasons.filter(s => !alreadyRequested.includes(s));
+			} else {
+				// Fallback: if total seasons is unavailable, let remaining be "all" (manual entry allowed)
+				remaining = ['all'];
 			}
-			const alreadyRequested = info.seasonRequests && Array.isArray(info.seasonRequests)
-				? info.seasonRequests.map(s => s.seasonNumber)
-				: [];
-			// If totalSeasons is known, remaining are those not already requested.
-			// If unknown (totalSeasons === 0), let remaining be ['all'] (i.e. the user can request all).
-			const remaining = fullSeasons.length > 0
-				? fullSeasons.filter(s => !alreadyRequested.includes(s))
-				: ['all'];
 			this.availableSeasons.set(messageId, fullSeasons);
 			this.remainingSeasons.set(messageId, remaining);
 		}
@@ -201,9 +199,9 @@ module.exports = {
 		let componentsArray = [selectMenu];
 
 		if (isTv) {
-			// For TV shows, enable the Request button if there are remaining seasons.
 			const remaining = this.remainingSeasons.get(messageId) || [];
 			if (remaining.length === 0) {
+				// All seasons have been requested—disable the button.
 				const disabledRow = new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId('mediaAvailable')
@@ -213,6 +211,7 @@ module.exports = {
 				);
 				componentsArray.push(disabledRow);
 			} else {
+				// There are remaining seasons to request.
 				const requestRow = new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
