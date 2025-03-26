@@ -63,14 +63,17 @@ client.on('interactionCreate', async interaction => {
 			const mediaType = parts[3];
 			const messageId = parts[4];
 			if (mediaType === 'tv') {
-				// Retrieve remaining seasons from request.js
+				// Retrieve available and remaining seasons from request.js
+				const available = request.availableSeasons.get(messageId) || [];
+				const totalSeasons = available.length;
 				const remaining = request.remainingSeasons.get(messageId) || [];
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('Select Seasons');
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					.setLabel(`Enter seasons (Remaining: ${remaining.join(', ')})`)
+					// The label includes instructions and the total number of seasons
+					.setLabel(`Enter season numbers (Total: ${totalSeasons}). Format: "All Seasons", "1,3,5" or "1-3" (Remaining: ${remaining.join(', ')})`)
 					.setStyle(TextInputStyle.Short)
 					.setPlaceholder(`All Seasons or e.g., ${remaining.join(', ')}`)
 					.setValue('All Seasons')
@@ -110,7 +113,7 @@ client.on('interactionCreate', async interaction => {
 					seasonNumbers = [input];
 				}
 			}
-	
+
 			// Validate input against remaining seasons.
 			const remaining = request.remainingSeasons.get(messageId) || [];
 			const remainingStr = remaining.map(num => num.toString());
@@ -122,7 +125,7 @@ client.on('interactionCreate', async interaction => {
 				});
 				return;
 			}
-	
+
 			// Store valid selection and inform user.
 			request.seasonSelections.set(messageId, seasonNumbers);
 			await interaction.reply({
@@ -132,7 +135,7 @@ client.on('interactionCreate', async interaction => {
 			// Proceed to send the request with the chosen seasons.
 			await request.sendRequest(interaction, id, mediaType, messageId, seasonNumbers);
 		}
-	}	
+	}
 });
 
 client.login(token);
