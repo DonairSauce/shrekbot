@@ -124,14 +124,28 @@ module.exports = {
 
 		// For TV shows, compute full and remaining seasons.
 		if (isTv) {
-			const totalSeasons = info.totalSeasons || (info.seasonRequests && info.seasonRequests.length > 0
-				? Math.max(...info.seasonRequests.map(s => s.seasonNumber))
-				: 0);
-			const fullSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+			let totalSeasons;
+			if (info.totalSeasons) {
+				totalSeasons = info.totalSeasons;
+			} else if (info.seasonRequests && info.seasonRequests.length > 0) {
+				totalSeasons = Math.max(...info.seasonRequests.map(s => s.seasonNumber));
+			} else {
+				// If no season info is provided, we cannot compute full seasons.
+				// In this case, we'll assume the user can request manually.
+				totalSeasons = 0;
+			}
+			let fullSeasons = [];
+			if (totalSeasons > 0) {
+				fullSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+			}
 			const alreadyRequested = info.seasonRequests && Array.isArray(info.seasonRequests)
 				? info.seasonRequests.map(s => s.seasonNumber)
 				: [];
-			const remaining = fullSeasons.filter(s => !alreadyRequested.includes(s));
+			// If totalSeasons is known, remaining are those not already requested.
+			// If unknown (totalSeasons === 0), let remaining be ['all'] (i.e. the user can request all).
+			const remaining = fullSeasons.length > 0
+				? fullSeasons.filter(s => !alreadyRequested.includes(s))
+				: ['all'];
 			this.availableSeasons.set(messageId, fullSeasons);
 			this.remainingSeasons.set(messageId, remaining);
 		}
