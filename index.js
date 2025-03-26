@@ -63,26 +63,36 @@ client.on('interactionCreate', async interaction => {
 			const mediaType = parts[3];
 			const messageId = parts[4];
 			if (mediaType === 'tv') {
-				// Retrieve remaining seasons from the request module.
 				const remaining = request.remainingSeasons.get(messageId) || [];
-				const remainingStr = remaining.length > 0 ? remaining.join(', ') : 'None';
+				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
+
+				// Construct a short label that includes total seasons (e.g. "Seasons (T=10)")
+				const labelText = `Seasons (T=${totalSeasons || '???'})`;
+
+				// Construct a placeholder that shows how to request specific seasons + remaining
+				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
+				const placeholderText = `Use "All Seasons", "1,3,5" or "1-3". Remaining: ${remainingStr}`;
+
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('Select Seasons');
+
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					// Use a concise label and show remaining seasons.
-					.setLabel(`Enter seasons (Remaining: ${remainingStr})`)
+					// Short label must be under 45 characters
+					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
-					// Detailed instructions go into the placeholder.
-					.setPlaceholder(`All Seasons or e.g., ${remainingStr}`)
+					// Provide instructions in the placeholder
+					.setPlaceholder(placeholderText)
+					// Pre-fill the input with "All Seasons"
 					.setValue('All Seasons')
 					.setRequired(true);
+
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
 				await interaction.showModal(modal);
 			} else {
-				// For movies, proceed directly.
+				// For movies
 				interaction.deferUpdate();
 				await request.sendRequest(interaction, id, mediaType, messageId, '');
 			}
