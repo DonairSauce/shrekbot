@@ -65,17 +65,17 @@ client.on('interactionCreate', async interaction => {
 			if (mediaType === 'tv') {
 				// Retrieve available and remaining seasons from request.js
 				const available = request.availableSeasons.get(messageId) || [];
-				const totalSeasons = available.length;
-				const remaining = request.remainingSeasons.get(messageId) || [];
+				const totalSeasons = remaining.length > 0 ? remaining.length : 0; 
+				const remainingStr = remaining.join(', ');
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('Select Seasons');
 				const seasonInput = new TextInputBuilder()
-					.setCustomId('tvSeasonNumbers')
-					// The label includes instructions and the total number of seasons
-					.setLabel(`Enter season numbers (Total: ${totalSeasons}). Format: "All Seasons", "1,3,5" or "1-3" (Remaining: ${remaining.join(', ')})`)
+					// Short label under 45 characters
+					.setLabel(`Seasons (T:${totalSeasons})`)
 					.setStyle(TextInputStyle.Short)
-					.setPlaceholder(`All Seasons or e.g., ${remaining.join(', ')}`)
+					// Detailed instructions in the placeholder
+					.setPlaceholder(`All Seasons or e.g. ${remainingStr} (use commas or a dash)`)
 					.setValue('All Seasons')
 					.setRequired(true);
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
