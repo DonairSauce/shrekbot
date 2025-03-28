@@ -65,24 +65,39 @@ client.on('interactionCreate', async interaction => {
 			if (mediaType === 'tv') {
 				const remaining = request.remainingSeasons.get(messageId) || [];
 				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
-				const labelText = totalSeasons > 0 ? `Seasons (T=${totalSeasons})` : 'Seasons';
+				const labelText = totalSeasons > 0
+					? `Seasons (T=${totalSeasons})`
+					: 'Seasons';
 				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
+				const placeholderText = `Leave empty for All, or enter like "1,3,5" or "1-3"`;
 
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
-					.setTitle('Select Seasons');
+					.setTitle('🎬 Choose Seasons to Request');
 
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					.setLabel(labelText) // short label under 45 characters
+					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
-					// Placeholder contains instructions on how to request specific seasons.
-					.setPlaceholder(`Leave empty for "All Seasons", or type like "1,3,5" or "1-3". Remaining: ${remainingStr}`)
-					.setRequired(false);
+					.setPlaceholder(placeholderText)
+					.setRequired(false); // ✅ Allow empty input for 'All Seasons'
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
-				await interaction.showModal(modal);
+
+				await interaction.reply({
+					content: `📺 **How to request seasons:**  
+			- Leave the field empty or type \`All Seasons\` to request everything.  
+			- Use \`1-3\` to request a range.  
+			- Use \`1,3,5\` to request specific seasons.  
+			- You can only request from: **${remainingStr}**.`,
+					ephemeral: true
+				});
+
+				// Small delay to ensure the ephemeral message appears
+				setTimeout(() => {
+					interaction.showModal(modal);
+				}, 500);
 			} else {
 				// For movies
 				interaction.deferUpdate();
