@@ -66,10 +66,12 @@ client.on('interactionCreate', async interaction => {
 				const remaining = request.remainingSeasons.get(messageId) || [];
 				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
 
-				// Construct a short label that includes total seasons (e.g. "Seasons (T=10)")
-				const labelText = `Seasons (T=${totalSeasons || '???'})`;
+				// If totalSeasons is unknown, just show "Seasons" as the label
+				const labelText = totalSeasons > 0
+					? `Seasons (T=${totalSeasons})`
+					: 'Seasons';
 
-				// Construct a placeholder that shows how to request specific seasons + remaining
+				// If no seasons are known or left, default to "All"
 				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
 				const placeholderText = `Use "All Seasons", "1,3,5" or "1-3". Remaining: ${remainingStr}`;
 
@@ -79,13 +81,9 @@ client.on('interactionCreate', async interaction => {
 
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					// Short label must be under 45 characters
 					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
-					// Provide instructions in the placeholder
 					.setPlaceholder(placeholderText)
-					// Pre-fill the input with "All Seasons"
-					.setValue('All Seasons')
 					.setRequired(true);
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
