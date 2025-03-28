@@ -65,13 +65,7 @@ client.on('interactionCreate', async interaction => {
 			if (mediaType === 'tv') {
 				const remaining = request.remainingSeasons.get(messageId) || [];
 				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
-
-				// If totalSeasons is unknown, just show "Seasons" as the label
-				const labelText = totalSeasons > 0
-					? `Seasons (T=${totalSeasons})`
-					: 'Seasons';
-
-				// If no seasons are known or left, default to "All"
+				const labelText = totalSeasons > 0 ? `Seasons (T=${totalSeasons})` : 'Seasons';
 				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
 				const placeholderText = `Use "All Seasons", "1,3,5" or "1-3". Remaining: ${remainingStr}`;
 
@@ -84,6 +78,10 @@ client.on('interactionCreate', async interaction => {
 					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
 					.setPlaceholder(placeholderText)
+					// Pre-fill with "All Seasons"
+					.setValue('All Seasons')
+					// Allow empty submission by marking the field as not required.
+					.setRequired(false);
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
