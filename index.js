@@ -67,7 +67,6 @@ client.on('interactionCreate', async interaction => {
 				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
 				const labelText = totalSeasons > 0 ? `Seasons (T=${totalSeasons})` : 'Seasons';
 				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
-				const placeholderText = `Use "All Seasons", "1,3,5" or "1-3". Remaining: ${remainingStr}`;
 
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
@@ -75,12 +74,10 @@ client.on('interactionCreate', async interaction => {
 
 				const seasonInput = new TextInputBuilder()
 					.setCustomId('tvSeasonNumbers')
-					.setLabel(labelText)
+					.setLabel(labelText) // short label under 45 characters
 					.setStyle(TextInputStyle.Short)
-					.setPlaceholder(placeholderText)
-					// Pre-fill with "All Seasons"
-					.setValue('All Seasons')
-					// Allow empty submission by marking the field as not required.
+					// Placeholder contains instructions on how to request specific seasons.
+					.setPlaceholder(`Leave empty for "All Seasons", or type like "1,3,5" or "1-3". Remaining: ${remainingStr}`)
 					.setRequired(false);
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
@@ -93,7 +90,6 @@ client.on('interactionCreate', async interaction => {
 			}
 		}
 	} else if (interaction.type === InteractionType.ModalSubmit) {
-		// Handle TV season modal submission using "::" as the delimiter
 		if (interaction.customId.startsWith('tvSeasonModal::')) {
 			const parts = interaction.customId.split('::');
 			const messageId = parts[1];
@@ -101,6 +97,7 @@ client.on('interactionCreate', async interaction => {
 			const mediaType = parts[3];
 			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
 			let seasonNumbers = [];
+			// If input is empty, default to 'all'
 			if (!input) {
 				seasonNumbers = ['all'];
 			} else if (input.toLowerCase() === 'all seasons') {
