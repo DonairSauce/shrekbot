@@ -94,10 +94,14 @@ client.on('interactionCreate', async interaction => {
 					ephemeral: true
 				});
 
-				// Small delay to ensure the ephemeral message appears
+				await interaction.showModal(modal);
+				// Show follow-up after 1 second with flags for ephemeral
 				setTimeout(() => {
-					interaction.showModal(modal);
-				}, 500);
+					interaction.followUp({
+						content: `📝 To request specific seasons, leave the input empty for "All Seasons", or type something like "1,3,5" or "1-3".`,
+						flags: 64 // 64 = ephemeral
+					}).catch(console.error);
+				}, 1000);
 			} else {
 				// For movies
 				interaction.deferUpdate();
