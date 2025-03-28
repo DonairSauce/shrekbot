@@ -84,7 +84,6 @@ client.on('interactionCreate', async interaction => {
 					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
 					.setPlaceholder(placeholderText)
-					.setRequired(true);
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
@@ -104,7 +103,9 @@ client.on('interactionCreate', async interaction => {
 			const mediaType = parts[3];
 			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
 			let seasonNumbers = [];
-			if (input.toLowerCase() === 'all seasons') {
+			if (!input) {
+				seasonNumbers = ['all'];
+			} else if (input.toLowerCase() === 'all seasons') {
 				seasonNumbers = ['all'];
 			} else {
 				// Support range "1-3" or comma-separated "1,3,5"
