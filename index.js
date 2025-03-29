@@ -86,13 +86,7 @@ client.on('interactionCreate', async interaction => {
 				modal.addComponents(actionRow);
 
 				await interaction.showModal(modal);
-				// Show follow-up after 1 second with flags for ephemeral
-				setTimeout(() => {
-					interaction.followUp({
-						content: `📝 To request specific seasons, leave the input empty for "All Seasons", or type something like "1,3,5" or "1-3".`,
-						flags: 64 // 64 = ephemeral
-					}).catch(console.error);
-				}, 1000);
+
 			} else {
 				// For movies
 				interaction.deferUpdate();
@@ -130,13 +124,17 @@ client.on('interactionCreate', async interaction => {
 			// Validate input against remaining seasons
 			const remaining = request.remainingSeasons.get(messageId) || [];
 			const remainingStr = remaining.map(num => num.toString());
-			const invalid = seasonNumbers.filter(s => s !== 'all' && !remainingStr.includes(s));
-			if (invalid.length > 0) {
-				await interaction.reply({
-					content: `❌ Invalid season(s): ${invalid.join(', ')}.\nRemaining: ${remainingStr.join(', ')}`,
-					flags: 64 // ephemeral
-				});
-				return;
+
+			// Skip validation if fallback is 'all'
+			if (!(remaining.length === 1 && remaining[0] === 'all')) {
+				const invalid = seasonNumbers.filter(s => s !== 'all' && !remainingStr.includes(s));
+				if (invalid.length > 0) {
+					await interaction.reply({
+						content: `❌ Invalid season(s): ${invalid.join(', ')}.\nRemaining: ${remainingStr.join(', ')}`,
+						flags: 64 // ephemeral
+					});
+					return;
+				}
 			}
 
 			// Save selection and proceed
