@@ -8,6 +8,8 @@ const {
 } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
 const ombiIP = process.env.ombiip;
 const ombiPort = process.env.ombiport;
@@ -107,7 +109,15 @@ module.exports = {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			}).then(response => response.json());
-			console.log('🔎 Ombi search info response:', JSON.stringify(info, null, 2));
+			try {
+				const safeName = (info.title || `media_${Date.now()}`).replace(/[<>:"/\\|?*]/g, '');
+				const debugPath = path.join(__dirname, `../logs/${safeName}.json`);
+				fs.mkdirSync(path.dirname(debugPath), { recursive: true });
+				fs.writeFileSync(debugPath, JSON.stringify(info, null, 2));
+				console.log(`[DEBUG] Logged media response to logs/${safeName}.json`);
+			} catch (err) {
+				console.error('[ERROR] Failed to save media debug log:', err);
+			}
 		} catch (err) {
 			console.log(err);
 		}
