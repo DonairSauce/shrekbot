@@ -85,15 +85,6 @@ client.on('interactionCreate', async interaction => {
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
 
-				await interaction.reply({
-					content: `📺 **How to request seasons:**  
-			- Leave the field empty or type \`All Seasons\` to request everything.  
-			- Use \`1-3\` to request a range.  
-			- Use \`1,3,5\` to request specific seasons.  
-			- You can only request from: **${remainingStr}**.`,
-					ephemeral: true
-				});
-
 				await interaction.showModal(modal);
 				// Show follow-up after 1 second with flags for ephemeral
 				setTimeout(() => {
