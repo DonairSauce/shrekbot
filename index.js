@@ -80,7 +80,7 @@ client.on('interactionCreate', async interaction => {
 					.setLabel(labelText)
 					.setStyle(TextInputStyle.Short)
 					.setPlaceholder(placeholderText)
-					.setRequired(false); // ✅ Allow empty input for 'All Seasons'
+					.setRequired(false); // Allow empty input for 'All Seasons'
 
 				const actionRow = new ActionRowBuilder().addComponents(seasonInput);
 				modal.addComponents(actionRow);
@@ -114,15 +114,14 @@ client.on('interactionCreate', async interaction => {
 			const messageId = parts[1];
 			const id = parts[2];
 			const mediaType = parts[3];
-			const input = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
+			const inputRaw = interaction.fields.getTextInputValue('tvSeasonNumbers').trim();
+			const input = inputRaw.toLowerCase();
 			let seasonNumbers = [];
-			// If input is empty, default to 'all'
-			if (!input) {
-				seasonNumbers = ['all'];
-			} else if (input.toLowerCase() === 'all seasons') {
+			// Treat empty or "all seasons" input as a request for all seasons
+			if (!input || input === 'all seasons') {
 				seasonNumbers = ['all'];
 			} else {
-				// Support range "1-3" or comma-separated "1,3,5"
+				// Parse input: ranges (e.g., 1-3), comma-separated (e.g., 1,3,5), or single number
 				if (input.includes('-')) {
 					const [start, end] = input.split('-').map(Number);
 					if (!isNaN(start) && !isNaN(end) && start <= end) {
@@ -133,29 +132,28 @@ client.on('interactionCreate', async interaction => {
 				} else if (input.includes(',')) {
 					seasonNumbers = input.split(',').map(s => s.trim());
 				} else {
-					seasonNumbers = [input];
+					seasonNumbers = [inputRaw];
 				}
 			}
 
-			// Validate input against remaining seasons.
+			// Validate input against remaining seasons
 			const remaining = request.remainingSeasons.get(messageId) || [];
 			const remainingStr = remaining.map(num => num.toString());
 			const invalid = seasonNumbers.filter(s => s !== 'all' && !remainingStr.includes(s));
 			if (invalid.length > 0) {
 				await interaction.reply({
-					content: `Invalid season(s): ${invalid.join(', ')}. Remaining seasons: ${remainingStr.join(', ')}.`,
-					ephemeral: true,
+					content: `❌ Invalid season(s): ${invalid.join(', ')}.\nRemaining: ${remainingStr.join(', ')}`,
+					flags: 64 // ephemeral
 				});
 				return;
 			}
 
-			// Store valid selection and inform user.
+			// Save selection and proceed
 			request.seasonSelections.set(messageId, seasonNumbers);
 			await interaction.reply({
-				content: `You selected season(s): ${seasonNumbers.join(', ')}.`,
-				ephemeral: true,
+				content: `✅ You selected season(s): ${seasonNumbers.join(', ')}`,
+				flags: 64
 			});
-			// Proceed to send the request with the chosen seasons.
 			await request.sendRequest(interaction, id, mediaType, messageId, seasonNumbers);
 		}
 	}
