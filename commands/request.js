@@ -168,6 +168,20 @@ module.exports = {
 				if (object.requested) {
 					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 				}
+
+				// Add season info for TV shows
+				if (!isMovie) {
+					const total = availableSeasons.get(messageId) || [];
+					const remaining = remainingSeasons.get(messageId) || [];
+					const requested = total.filter(season => !remaining.includes(season));
+
+					embed.addFields([
+						{ name: '📺 Total Seasons', value: total.length.toString(), inline: true },
+						{ name: '📦 Requested', value: requested.length > 0 ? requested.join(', ') : 'None', inline: true },
+						{ name: '🆕 Remaining', value: remaining.length > 0 ? remaining.join(', ') : 'All', inline: true }
+					]);
+				}
+
 				return embed;
 			} catch (err) {
 				console.log('error in showBuilder:', err);
