@@ -107,6 +107,7 @@ module.exports = {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			}).then(response => response.json());
+			console.log('🔎 Ombi search info response:', JSON.stringify(info, null, 2));
 		} catch (err) {
 			console.log(err);
 		}
