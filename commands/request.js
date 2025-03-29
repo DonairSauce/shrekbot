@@ -8,8 +8,6 @@ const {
 } = require('discord.js');
 const fetch = require('node-fetch');
 const Discord = require('discord.js');
-const fs = require('fs');
-const path = require('path');
 
 const ombiIP = process.env.ombiip;
 const ombiPort = process.env.ombiport;
@@ -100,24 +98,17 @@ module.exports = {
 	async search(id, interaction) {
 		const [mediaType, movieDbId, messageId, searchQuery] = id.split(',');
 		await this.getSearchResults(interaction, messageId, searchQuery);
+
 		const isMovie = mediaType === 'movie';
 		const isTv = mediaType === 'tv';
 		const apiSubUrl = isMovie ? '/api/v2/Search/movie/' : '/api/v2/Search/tv/moviedb/';
+
 		let info;
 		try {
 			info = await fetch(`http://${ombiIP}:${ombiPort}${apiSubUrl}${movieDbId}`, {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			}).then(response => response.json());
-			try {
-				const safeName = (info.title || `media_${Date.now()}`).replace(/[<>:"/\\|?*]/g, '');
-				const debugPath = path.join(__dirname, `../logs/${safeName}.json`);
-				fs.mkdirSync(path.dirname(debugPath), { recursive: true });
-				fs.writeFileSync(debugPath, JSON.stringify(info, null, 2));
-				console.log(`[DEBUG] Logged media response to logs/${safeName}.json`);
-			} catch (err) {
-				console.error('[ERROR] Failed to save media debug log:', err);
-			}
 		} catch (err) {
 			console.log(err);
 		}
@@ -133,29 +124,21 @@ module.exports = {
 			requested: info.requested,
 		};
 
-		// For TV shows, compute full and remaining seasons.
+		// Handle TV seasons
+		let totalSeasons = 0;
+		let requestedSeasons = [];
+		let remaining = [];
+
 		if (isTv) {
-			// Try to determine the total number of seasons.
-			let totalSeasons = info.totalSeasons;
-			if (!totalSeasons && info.childRequest && info.childRequest.parentRequest && info.childRequest.parentRequest.totalSeasons) {
-				totalSeasons = info.childRequest.parentRequest.totalSeasons;
-			}
-			let fullSeasons = [];
-			let remaining = [];
-			if (totalSeasons && totalSeasons > 0) {
-				// Create a list of all seasons [1, 2, ..., totalSeasons]
-				fullSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-				// Extract already requested season numbers from seasonRequests.
-				const alreadyRequested = info.seasonRequests && Array.isArray(info.seasonRequests)
-					? info.seasonRequests.map(s => s.seasonNumber)
-					: [];
-				// Remaining seasons are those not already requested.
-				remaining = fullSeasons.filter(s => !alreadyRequested.includes(s));
+			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
+				requestedSeasons = info.seasonRequests.map(s => s.seasonNumber);
+				totalSeasons = info.seasonRequests.length;
+				const allSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+				remaining = allSeasons.filter(s => !requestedSeasons.includes(s));
 			} else {
-				// Fallback: if total seasons is unavailable, let remaining be "all" (manual entry allowed)
 				remaining = ['all'];
 			}
-			this.availableSeasons.set(messageId, fullSeasons);
+			this.availableSeasons.set(messageId, Array.from({ length: totalSeasons }, (_, i) => i + 1));
 			this.remainingSeasons.set(messageId, remaining);
 		}
 
@@ -173,24 +156,16 @@ module.exports = {
 						text: `Searched by ${interaction.member.user.username}`,
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
-				if (object.available) {
-					embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
-				}
-				if (object.requested) {
-					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
-				}
 
-				// Add season info for TV shows
-				if (!isMovie) {
-					const total = availableSeasons.get(messageId) || [];
-					const remaining = remainingSeasons.get(messageId) || [];
-					const requested = total.filter(season => !remaining.includes(season));
+				if (object.available) embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
+				if (object.requested) embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 
-					embed.addFields([
-						{ name: '📺 Total Seasons', value: total.length.toString(), inline: true },
-						{ name: '📦 Requested', value: requested.length > 0 ? requested.join(', ') : 'None', inline: true },
-						{ name: '🆕 Remaining', value: remaining.length > 0 ? remaining.join(', ') : 'All', inline: true }
-					]);
+				if (isTv) {
+					embed.addFields(
+						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
+						{ name: '📦 Requested', value: requestedSeasons.length ? requestedSeasons.join(', ') : 'None', inline: true },
+						{ name: '🆕 Remaining', value: remaining.length ? remaining.join(', ') : 'All', inline: true }
+					);
 				}
 
 				return embed;
@@ -215,7 +190,7 @@ module.exports = {
 
 		const embedMessage = showBuilder();
 
-		// Build components array 
+		// Components
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
@@ -226,56 +201,45 @@ module.exports = {
 		if (isTv) {
 			const remaining = this.remainingSeasons.get(messageId) || [];
 			if (remaining.length === 0) {
-				// All seasons have been requested—disable the button.
-				const disabledRow = new ActionRowBuilder().addComponents(
+				componentsArray.push(new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId('mediaAvailable')
 						.setLabel(`${object.title.substr(0, 58)} Is Already Requested!`)
 						.setStyle(ButtonStyle.Primary)
 						.setDisabled(true)
-				);
-				componentsArray.push(disabledRow);
+				));
 			} else {
-				// There are remaining seasons to request.
-				const requestRow = new ActionRowBuilder().addComponents(
+				componentsArray.push(new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
 						.setStyle(ButtonStyle.Primary)
 						.setLabel('Request')
-				);
-				componentsArray.push(requestRow);
+				));
 			}
 		} else {
-			// For movies
 			if (!(object.requested || object.available)) {
-				const requestRow = new ActionRowBuilder().addComponents(
+				componentsArray.push(new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
 						.setStyle(ButtonStyle.Primary)
 						.setLabel('Request')
-				);
-				componentsArray.push(requestRow);
+				));
 			} else {
-				const disabledRow = new ActionRowBuilder().addComponents(
+				componentsArray.push(new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId('mediaAvailable')
 						.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
 						.setStyle(ButtonStyle.Primary)
 						.setDisabled(true)
-				);
-				componentsArray.push(disabledRow);
+				));
 			}
 		}
 
 		try {
 			if (!interaction.message) {
-				interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => {
-					timeOut(interaction);
-				});
+				interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => timeOut(interaction));
 			} else {
-				interaction.update({ embeds: [embedMessage], components: componentsArray }).then(() => {
-					timeOut(interaction);
-				});
+				interaction.update({ embeds: [embedMessage], components: componentsArray }).then(() => timeOut(interaction));
 			}
 		} catch (err) {
 			console.log(err);
