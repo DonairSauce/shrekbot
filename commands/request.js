@@ -173,7 +173,10 @@ module.exports = {
 				totalSeasons = allSeasonNumbers.length;
 
 				requestedSeasons = info.seasonRequests
-					.filter(s => Array.isArray(s.episodes) && s.episodes.some(e => e.requested))
+					.filter(s => s.requested || (
+						Array.isArray(s.episodes) && s.episodes.length > 0 &&
+						s.episodes.every(e => e.requested)
+					))
 					.map(s => s.seasonNumber);
 
 				remaining = allSeasonNumbers.filter(s => !requestedSeasons.includes(s));
@@ -229,10 +232,11 @@ module.exports = {
 				if (object.requested) embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
 
 				if (isTv) {
+					const allRequested = remaining.length === 0;
 					embed.addFields(
 						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
-						{ name: '📦 Requested', value: requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None', inline: true },
-						{ name: '🆕 Remaining', value: remaining.length === 0 ? 'None' : (remaining.length === totalSeasons ? 'All' : formatSeasonRanges(remaining)), inline: true }
+						{ name: '📦 Requested', value: allRequested ? 'All' : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
+						{ name: '🆕 Remaining', value: allRequested ? 'None' : formatSeasonRanges(remaining), inline: true }
 					);
 				}
 
