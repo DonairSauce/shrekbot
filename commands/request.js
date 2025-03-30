@@ -52,7 +52,7 @@ module.exports = {
 				let seasonNumbers = [];
 				const input = seasonsArg.toLowerCase().trim();
 
-				if (!input || input === 'all seasons') {
+				if (!input || input === 'all' || input === 'all seasons') {
 					seasonNumbers = ['all'];
 				} else if (input.includes('-')) {
 					const [start, end] = input.split('-').map(Number);
@@ -70,7 +70,7 @@ module.exports = {
 				// Save the seasons and send request directly
 				this.seasonSelections.set(messageId, seasonNumbers);
 				await this.sendRequest(interaction, movieDbId, mediaType, messageId, seasonNumbers);
-				await interaction.reply({
+				await interaction.followUp({
 					content: `✅ Your request for seasons ${seasonNumbers.join(', ')} has been submitted.`,
 					ephemeral: true
 				});
@@ -321,7 +321,13 @@ module.exports = {
 				.setLabel('Your request is processing')
 				.setDisabled(true)
 		);
-		await interaction.message.edit({ components: [processing] });
+
+		if (interaction.replied || interaction.deferred) {
+			await interaction.editReply({ components: [processing] });
+		} else {
+			await interaction.reply({ components: [processing] });
+		}
+
 		clearTimeout(timerManager.get(messageId));
 		const { member } = interaction;
 		console.log(`${member.user.username} sent a request to Ombi`);
@@ -382,7 +388,9 @@ module.exports = {
 					.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : `Request Failed: Error ${responseStatusCode}`)
 					.setDisabled(true)
 			);
-			await interaction.message.edit({ components: [row] });
+			if (interaction.message) {
+				await interaction.message.edit({ components: [row] });
+			}
 		}
 		console.log('All done, now get out of my swamp');
 	}
