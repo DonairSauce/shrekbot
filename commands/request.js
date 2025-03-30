@@ -241,38 +241,42 @@ module.exports = {
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
 
-				if (object.available) embed.addFields([{ name: '__Available__', value: '✅', inline: true }]);
-				if (object.requested) embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
+				// Show "Requested" only if true
+				if (object.requested) {
+					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
+				}
 
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
-					const allAvailable = object.available === true;
-					const anyAvailable = info.seasonRequests?.some(s =>
-						s.episodes?.some(e => e.available === true)
-					);
-					let statusText = '';
+					const noneRequested = requestedSeasons.length === 0;
 
-					if (allAvailable) {
-						statusText = '✅ Fully Available';
-					} else if (anyAvailable) {
-						statusText = '🟡 Partially Available';
-					} else if (requestedSeasons.length > 0) {
-						statusText = '📦 Requested (Not Available)';
-					} else {
-						statusText = '📦 Not Requested';
+					// Determine status field
+					let statusValue = '❌ Not Requested';
+					if (allRequested && object.available) statusValue = '✅ Fully Available';
+					else if (allRequested && !object.available) statusValue = '✅ Requested';
+					else if (!noneRequested && object.available) statusValue = '🟡 Partially Available';
+					else if (!noneRequested && !object.available) statusValue = '❌ Requested';
+
+					// Status
+					embed.addFields({ name: '__Status__', value: statusValue, inline: true });
+
+					// Requested
+					let requestedText = 'None';
+					if (allRequested) {
+						requestedText = `All (${totalSeasons})`;
+					} else if (!noneRequested) {
+						requestedText = `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})`;
 					}
+					embed.addFields({ name: '__Requested__', value: requestedText, inline: true });
 
-					embed.addFields(
-						{ name: '📺 Status', value: statusText, inline: true },
-						{ name: '📦 Requested', value: allRequested ? `All (${totalSeasons})` : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
-						{
-							name: '🆕 Remaining',
-							value: allRequested
-								? 'None'
-								: (requestedSeasons.length === 0 ? `All (${totalSeasons})` : formatSeasonRanges(remaining)),
-							inline: true
-						}
-					);
+					// Remaining
+					let remainingText = 'None';
+					if (noneRequested) {
+						remainingText = `All (${totalSeasons})`;
+					} else if (!allRequested) {
+						remainingText = formatSeasonRanges(remaining);
+					}
+					embed.addFields({ name: '__Remaining__', value: remainingText, inline: true });
 				}
 
 				return embed;
