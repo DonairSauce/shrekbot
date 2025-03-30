@@ -246,25 +246,30 @@ module.exports = {
 
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
+					const allAvailable = object.available === true;
+					const anyAvailable = info.seasonRequests?.some(s =>
+						s.episodes?.some(e => e.available === true)
+					);
+					let statusText = '';
 
-					// Status field logic
-					let status = '';
-					if (allRequested && object.available) {
-						status = '✅ Fully Available';
-					} else if (allRequested && !object.available) {
-						status = '📦 Requested, awaiting availability';
+					if (allAvailable) {
+						statusText = '✅ Fully Available';
+					} else if (anyAvailable) {
+						statusText = '🟡 Partially Available';
 					} else if (requestedSeasons.length > 0) {
-						status = '🟡 Partially Available';
+						statusText = '📦 Requested (Not Available)';
 					} else {
-						status = '🆕 Not Requested';
+						statusText = '📦 Not Requested';
 					}
 
 					embed.addFields(
-						{ name: '📺 Status', value: status, inline: true },
+						{ name: '📺 Status', value: statusText, inline: true },
 						{ name: '📦 Requested', value: allRequested ? `All (${totalSeasons})` : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
 						{
 							name: '🆕 Remaining',
-							value: allRequested ? 'None' : (requestedSeasons.length === 0 ? 'All' : formatSeasonRanges(remaining)),
+							value: allRequested
+								? 'None'
+								: (requestedSeasons.length === 0 ? `All (${totalSeasons})` : formatSeasonRanges(remaining)),
 							inline: true
 						}
 					);
