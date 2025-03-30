@@ -246,14 +246,25 @@ module.exports = {
 
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
+
+					// Status field logic
+					let status = '';
+					if (allRequested && object.available) {
+						status = '✅ Fully Available';
+					} else if (allRequested && !object.available) {
+						status = '📦 Requested, awaiting availability';
+					} else if (requestedSeasons.length > 0) {
+						status = '🟡 Partially Available';
+					} else {
+						status = '🆕 Not Requested';
+					}
+
 					embed.addFields(
-						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
-						{ name: '📦 Requested', value: allRequested ? 'All' : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
+						{ name: '📺 Status', value: status, inline: true },
+						{ name: '📦 Requested', value: allRequested ? `All (${totalSeasons})` : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
 						{
 							name: '🆕 Remaining',
-							value: allRequested
-								? 'None'
-								: (requestedSeasons.length === 0 ? 'All' : formatSeasonRanges(remaining)),
+							value: allRequested ? 'None' : (requestedSeasons.length === 0 ? 'All' : formatSeasonRanges(remaining)),
 							inline: true
 						}
 					);
@@ -291,7 +302,9 @@ module.exports = {
 
 		if (isTv) {
 			const remaining = this.remainingSeasons.get(messageId) || [];
-			if (remaining.length === 0) {
+			const allRequested = totalSeasons > 0 && remaining.length === 0;
+
+			if (allRequested) {
 				componentsArray.push(new ActionRowBuilder().addComponents(
 					new ButtonBuilder()
 						.setCustomId('mediaAvailable')
