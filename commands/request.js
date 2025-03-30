@@ -152,6 +152,26 @@ module.exports = {
 			}
 		}		
 
+		function formatSeasonRanges(seasons) {
+			if (!Array.isArray(seasons) || seasons.length === 0) return '';
+			seasons.sort((a, b) => a - b);
+		
+			const ranges = [];
+			let start = seasons[0];
+			let end = seasons[0];
+		
+			for (let i = 1; i <= seasons.length; i++) {
+				if (seasons[i] === end + 1) {
+					end = seasons[i];
+				} else {
+					ranges.push(start === end ? `${start}` : `${start}-${end}`);
+					start = seasons[i];
+					end = seasons[i];
+				}
+			}
+			return ranges.join(', ');
+		}
+		
 		// Build embed
 		function showBuilder() {
 			try {
@@ -173,9 +193,9 @@ module.exports = {
 				if (isTv) {
 					embed.addFields(
 						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
-						{ name: '📦 Requested', value: requestedSeasons.length ? requestedSeasons.join(', ') : 'None', inline: true },
-						{ name: '🆕 Remaining', value: remaining.length ? remaining.join(', ') : 'All', inline: true }
-					);
+						{ name: '📦 Requested', value: requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None', inline: true },
+						{ name: '🆕 Remaining', value: remaining.length === 0 ? 'None' : (remaining.length === totalSeasons ? 'All' : formatSeasonRanges(remaining)), inline: true }
+					);					
 				}
 
 				return embed;
