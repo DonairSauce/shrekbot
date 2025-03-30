@@ -147,6 +147,7 @@ module.exports = {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			}).then(response => response.json());
+			console.log('Fetched seasonRequests:', JSON.stringify(info.seasonRequests, null, 2));
 		} catch (err) {
 			console.log(err);
 		}
@@ -174,8 +175,9 @@ module.exports = {
 
 				requestedSeasons = info.seasonRequests
 					.filter(s =>
-						s.requested === true || // season marked as requested
-						(Array.isArray(s.episodes) && s.episodes.length > 0 && s.episodes.every(e => e.requested === true))
+						Array.isArray(s.episodes) &&
+						s.episodes.length > 0 &&
+						s.episodes.every(e => e.requested === true)
 					)
 					.map(s => s.seasonNumber);
 
