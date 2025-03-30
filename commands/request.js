@@ -32,13 +32,51 @@ module.exports = {
 				.setDescription('Enter the name of a TV show or movie.')
 				.setMaxLength(75)
 				.setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName('seasons')
+				.setDescription('Optional: Seasons to request (e.g. "1,3,5" or "1-3")')
+				.setRequired(false)
 		),
 	async execute(interaction, messageId) {
 		let args = interaction.options.getString('search').toString().replace(/,/g, ' ');
 		const query = encodeURIComponent(args);
+		const seasonsArg = interaction.options.getString('seasons');
+
 		const idOfFirstItem = await this.getSearchResults(interaction, messageId, query);
 		if (idOfFirstItem !== undefined) {
-			this.search(idOfFirstItem, interaction);
+			if (seasonsArg) {
+				const [mediaType, movieDbId, msgId, searchQuery] = idOfFirstItem.split(',');
+				await this.search(idOfFirstItem, interaction);
+
+				let seasonNumbers = [];
+				const input = seasonsArg.toLowerCase().trim();
+
+				if (!input || input === 'all seasons') {
+					seasonNumbers = ['all'];
+				} else if (input.includes('-')) {
+					const [start, end] = input.split('-').map(Number);
+					if (!isNaN(start) && !isNaN(end) && start <= end) {
+						for (let i = start; i <= end; i++) {
+							seasonNumbers.push(i.toString());
+						}
+					}
+				} else if (input.includes(',')) {
+					seasonNumbers = input.split(',').map(s => s.trim());
+				} else {
+					seasonNumbers = [input];
+				}
+
+				// Save the seasons and send request directly
+				this.seasonSelections.set(messageId, seasonNumbers);
+				await this.sendRequest(interaction, movieDbId, mediaType, messageId, seasonNumbers);
+				await interaction.reply({
+					content: `✅ Your request for seasons ${seasonNumbers.join(', ')} has been submitted.`,
+					ephemeral: true
+				});
+			} else {
+				this.search(idOfFirstItem, interaction);
+			}
 		}
 		console.log(`Search for "${args}" by ${interaction.member.user.username} done`);
 	},
@@ -133,13 +171,13 @@ module.exports = {
 			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
 				totalSeasons = allSeasonNumbers.length;
-		
+
 				requestedSeasons = info.seasonRequests
 					.filter(s => Array.isArray(s.episodes) && s.episodes.some(e => e.requested))
 					.map(s => s.seasonNumber);
-		
+
 				remaining = allSeasonNumbers.filter(s => !requestedSeasons.includes(s));
-		
+
 				if (requestedSeasons.length === 0) {
 					remaining = [...allSeasonNumbers];
 				}
@@ -150,16 +188,16 @@ module.exports = {
 				this.availableSeasons.set(messageId, []);
 				this.remainingSeasons.set(messageId, remaining);
 			}
-		}		
+		}
 
 		function formatSeasonRanges(seasons) {
 			if (!Array.isArray(seasons) || seasons.length === 0) return '';
 			seasons.sort((a, b) => a - b);
-		
+
 			const ranges = [];
 			let start = seasons[0];
 			let end = seasons[0];
-		
+
 			for (let i = 1; i <= seasons.length; i++) {
 				if (seasons[i] === end + 1) {
 					end = seasons[i];
@@ -171,7 +209,7 @@ module.exports = {
 			}
 			return ranges.join(', ');
 		}
-		
+
 		// Build embed
 		function showBuilder() {
 			try {
@@ -195,7 +233,7 @@ module.exports = {
 						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
 						{ name: '📦 Requested', value: requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None', inline: true },
 						{ name: '🆕 Remaining', value: remaining.length === 0 ? 'None' : (remaining.length === totalSeasons ? 'All' : formatSeasonRanges(remaining)), inline: true }
-					);					
+					);
 				}
 
 				return embed;

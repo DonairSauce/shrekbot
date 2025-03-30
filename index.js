@@ -66,11 +66,11 @@ client.on('interactionCreate', async interaction => {
 				const remaining = request.remainingSeasons.get(messageId) || [];
 				const totalSeasons = request.availableSeasons.get(messageId)?.length || 0;
 				const labelText = totalSeasons > 0
-					? `Seasons (T=${totalSeasons})`
+					? `Seasons (Total: ${totalSeasons})`
 					: 'Seasons';
 				const remainingStr = remaining.length ? remaining.join(', ') : 'All';
-				const placeholderText = `Leave empty for All, or enter like "1,3,5" or "1-3"`;
-
+				const placeholderText = `Leave empty for All, or enter season(s) example:1,3,5 or 2-5`;
+				
 				const modal = new ModalBuilder()
 					.setCustomId(`tvSeasonModal::${messageId}::${id}::${mediaType}`)
 					.setTitle('🎬 Choose Seasons to Request');
