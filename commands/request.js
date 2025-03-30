@@ -177,15 +177,18 @@ module.exports = {
 					.filter(s =>
 						Array.isArray(s.episodes) &&
 						s.episodes.length > 0 &&
-						s.episodes.every(e => e.requested === true)
+						s.episodes.every(e => e.available === true || e.requested === true)
 					)
 					.map(s => s.seasonNumber);
 
-				remaining = allSeasonNumbers.filter(s => !requestedSeasons.includes(s));
+				remaining = allSeasonNumbers.filter(season =>
+					!requestedSeasons.includes(season)
+				);
 
 				if (requestedSeasons.length === 0) {
 					remaining = [...allSeasonNumbers];
 				}
+
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
