@@ -131,16 +131,26 @@ module.exports = {
 
 		if (isTv) {
 			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
-				requestedSeasons = info.seasonRequests.map(s => s.seasonNumber);
-				totalSeasons = info.seasonRequests.length;
-				const allSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-				remaining = allSeasons.filter(s => !requestedSeasons.includes(s));
+				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
+				totalSeasons = allSeasonNumbers.length;
+		
+				requestedSeasons = info.seasonRequests
+					.filter(s => Array.isArray(s.episodes) && s.episodes.some(e => e.requested))
+					.map(s => s.seasonNumber);
+		
+				remaining = allSeasonNumbers.filter(s => !requestedSeasons.includes(s));
+		
+				if (requestedSeasons.length === 0) {
+					remaining = [...allSeasonNumbers];
+				}
+				this.availableSeasons.set(messageId, allSeasonNumbers);
+				this.remainingSeasons.set(messageId, remaining);
 			} else {
 				remaining = ['all'];
+				this.availableSeasons.set(messageId, []);
+				this.remainingSeasons.set(messageId, remaining);
 			}
-			this.availableSeasons.set(messageId, Array.from({ length: totalSeasons }, (_, i) => i + 1));
-			this.remainingSeasons.set(messageId, remaining);
-		}
+		}		
 
 		// Build embed
 		function showBuilder() {
