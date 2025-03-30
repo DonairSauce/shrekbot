@@ -173,25 +173,20 @@ module.exports = {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
 				totalSeasons = allSeasonNumbers.length;
 
-				requestedSeasons = info.seasonRequests
-					.filter(s =>
-						Array.isArray(s.episodes) &&
-						s.episodes.length > 0 &&
-						s.episodes.every(e => e.available === true || e.requested === true)
-					)
-					.map(s => s.seasonNumber);
+				// Treat any season with a seasonRequest entry as requested
+				requestedSeasons = [...allSeasonNumbers];
 
-				remaining = allSeasonNumbers.filter(season =>
-					!requestedSeasons.includes(season)
-				);
-
-				if (requestedSeasons.length === 0) {
-					remaining = [...allSeasonNumbers];
+				// If all seasons are in requested, there are no remaining
+				if (requestedSeasons.length === totalSeasons) {
+					remaining = [];
+				} else {
+					remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
 				}
 
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
+				// No seasonRequests means none are requested, all remaining
 				remaining = ['all'];
 				this.availableSeasons.set(messageId, []);
 				this.remainingSeasons.set(messageId, remaining);
