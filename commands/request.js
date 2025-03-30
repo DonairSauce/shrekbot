@@ -241,7 +241,13 @@ module.exports = {
 					embed.addFields(
 						{ name: '📺 Total Seasons', value: totalSeasons.toString(), inline: true },
 						{ name: '📦 Requested', value: allRequested ? 'All' : (requestedSeasons.length > 0 ? formatSeasonRanges(requestedSeasons) : 'None'), inline: true },
-						{ name: '🆕 Remaining', value: allRequested ? 'None' : formatSeasonRanges(remaining), inline: true }
+						{
+							name: '🆕 Remaining',
+							value: allRequested
+								? 'None'
+								: (requestedSeasons.length === 0 ? 'All' : formatSeasonRanges(remaining)),
+							inline: true
+						}
 					);
 				}
 
