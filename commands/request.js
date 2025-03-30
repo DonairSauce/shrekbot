@@ -152,6 +152,19 @@ module.exports = {
 			console.log(err);
 		}
 
+		let isFullyAvailable = false;
+		if (isTv && Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
+			const allRequestedSeasons = info.seasonRequests.filter(s =>
+				Array.isArray(s.episodes) && s.episodes.length > 0
+			);
+			isFullyAvailable = allRequestedSeasons.length > 0 &&
+				allRequestedSeasons.every(season =>
+					season.episodes.every(e => e.available === true)
+				);
+		} else {
+			isFullyAvailable = info.available;
+		}
+
 		const object = {
 			id: info.id,
 			releaseDate: isMovie ? info.releaseDate : info.firstAired,
@@ -159,7 +172,7 @@ module.exports = {
 			description: info.overview,
 			image: isMovie ? info.posterPath : info.banner,
 			imdbID: info.imdbId,
-			available: info.available,
+			available: isFullyAvailable,
 			requested: info.requested,
 		};
 
