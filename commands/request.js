@@ -155,7 +155,7 @@ module.exports = {
 		let isFullyAvailable = false;
 		if (isTv && Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
 			const allRequestedSeasons = info.seasonRequests.filter(s =>
-				Array.isArray(s.episodes) && s.episodes.length > 0
+				s.episodes?.some(e => e.requested === true)
 			);
 			isFullyAvailable = allRequestedSeasons.length > 0 &&
 				allRequestedSeasons.every(season =>
