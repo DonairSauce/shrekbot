@@ -242,7 +242,9 @@ module.exports = {
 					});
 
 				if (isTv) {
-					const allRequested = totalSeasons > 0 && remaining.length === 0;	
+					const allRequested = totalSeasons > 0 && remaining.length === 0;
+					console.log(`All requested ${allRequested}`)	
+					console.log(`Show is available: ${object.available}`);
 					console.log(`Remaining season(s) length: ${remaining.length}`);
 					const noneRequested = requestedSeasons.length === 0;
 
