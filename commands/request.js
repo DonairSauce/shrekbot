@@ -143,7 +143,7 @@ module.exports = {
 		let totalSeasons = 0;
 		let requestedSeasons = [];
 		let remaining = [];
-		
+
 		let info;
 		try {
 			// Fetch base info (movie or tv)
@@ -170,47 +170,14 @@ module.exports = {
 					...baseInfo,
 					seasonRequests: matchedShow?.seasonRequests || [],
 					requested: matchedShow?.requested ?? baseInfo.requested,
-					available: matchedShow?.available ?? baseInfo.available
+					available: matchedShow?.available ?? baseInfo.available,
 				};
-
-				console.log(`[DEBUG] Combined TV info for ${info.title}:`, JSON.stringify(info, null, 2));
 			} else {
 				info = baseInfo;
-				console.log(`[DEBUG] Movie info for ${info.title}:`, JSON.stringify(info, null, 2));
 			}
 		} catch (err) {
 			console.error('[ERROR] Fetching media info:', err);
 			return interaction.reply({ content: '❌ Failed to retrieve media info.', ephemeral: true });
-		}
-
-		let isFullyAvailable = false;
-		if (isTv) {
-			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
-				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
-				totalSeasons = allSeasonNumbers.length;
-
-				requestedSeasons = info.seasonRequests
-					.filter(season => Array.isArray(season.episodes) && season.episodes.some(e => e.requested))
-					.map(s => s.seasonNumber);
-
-				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
-
-				this.availableSeasons.set(messageId, allSeasonNumbers);
-				this.remainingSeasons.set(messageId, remaining);
-			} else {
-				if (info.fullyAvailable || info.available) {
-					requestedSeasons = ['all'];
-					remaining = [];
-					totalSeasons = 1;
-				} else {
-					requestedSeasons = [];
-					remaining = ['all'];
-					totalSeasons = 1;
-				}
-
-				this.availableSeasons.set(messageId, requestedSeasons);
-				this.remainingSeasons.set(messageId, remaining);
-			}
 		}
 
 		const object = {
@@ -221,196 +188,114 @@ module.exports = {
 			image: isMovie ? info.posterPath : info.banner,
 			imdbID: info.imdbId,
 			available: info.available || info.fullyAvailable,
-			requested: info.requested || (info.fullyAvailable || requestedSeasons.length > 0),
+			requested: info.requested || info.fullyAvailable,
 		};
 
-		// Handle TV seasons
+		const embed = new Discord.EmbedBuilder()
+			.setColor('#0099ff')
+			.setTitle(`${object.title}${object.releaseDate ? ` (${object.releaseDate.substring(0, 4)})` : ''}`)
+			.setURL(`https://imdb.com/title/${object.imdbID}`)
+			.setDescription(object.description?.substring(0, 255) + '(...)' || 'No description')
+			.setImage(`https://image.tmdb.org/t/p/original/${object.image}`)
+			.setTimestamp()
+			.setFooter({
+				text: `Searched by ${interaction.member.user.username}`,
+				iconURL: interaction.member.user.displayAvatarURL(),
+			});
+
 		if (isTv) {
+			totalSeasons = baseInfo.childRequests?.length || baseInfo.seasonCount || 0;
+
 			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
 				totalSeasons = allSeasonNumbers.length;
 
 				requestedSeasons = info.seasonRequests
-					.filter(season => Array.isArray(season.episodes) && season.episodes.some(e => e.requested))
+					.filter(season => season.episodes.some(e => e.requested))
 					.map(s => s.seasonNumber);
 
-				// Remaining are those in allSeasonNumbers not in requestedSeasons
-				if (requestedSeasons.length === totalSeasons) {
+				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
+			} else {
+				if (info.fullyAvailable || info.available) {
+					requestedSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
 					remaining = [];
 				} else {
-					remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
-				}
-
-				console.log(`[DEBUG] Requested seasons for ${info.title}:`, requestedSeasons);
-				console.log(`[DEBUG] Remaining seasons for ${info.title}:`, remaining);
-
-				this.availableSeasons.set(messageId, allSeasonNumbers);
-				this.remainingSeasons.set(messageId, remaining);
-			} else {
-				remaining = ['all'];
-				this.availableSeasons.set(messageId, []);
-				this.remainingSeasons.set(messageId, remaining);
-			}
-		}
-
-		function formatSeasonRanges(seasons) {
-			if (!Array.isArray(seasons) || seasons.length === 0) return '';
-			seasons.sort((a, b) => a - b);
-
-			const ranges = [];
-			let start = seasons[0];
-			let end = seasons[0];
-
-			for (let i = 1; i <= seasons.length; i++) {
-				if (seasons[i] === end + 1) {
-					end = seasons[i];
-				} else {
-					ranges.push(start === end ? `${start}` : `${start}-${end}`);
-					start = seasons[i];
-					end = seasons[i];
+					requestedSeasons = [];
+					remaining = Array.from({ length: totalSeasons }, (_, i) => i + 1);
 				}
 			}
-			return ranges.join(', ');
-		}
 
-		// Build embed
-		function showBuilder() {
-			try {
-				const embed = new Discord.EmbedBuilder()
-					.setColor('#0099ff')
-					.setTitle(object.title + (object.releaseDate ? ` (${object.releaseDate.substring(0, 4)})` : ''))
-					.setURL(`https://imdb.com/title/${object.imdbID}`)
-					.setDescription(object.description ? object.description.substr(0, 255) + '(...)' : 'No description')
-					.setImage(`https://image.tmdb.org/t/p/original/${object.image}`)
-					.setTimestamp()
-					.setFooter({
-						text: `Searched by ${interaction.member.user.username}`,
-						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
-					});
+			this.availableSeasons.set(messageId, requestedSeasons);
+			this.remainingSeasons.set(messageId, remaining);
 
-				if (isTv) {
-					const allRequested = totalSeasons > 0 && remaining.length === 0;
-					console.log(`All requested ${allRequested}`)
-					console.log(`Show is available: ${object.available}`);
-					console.log(`Remaining season(s) length: ${remaining.length}`);
-					const noneRequested = requestedSeasons.length === 0;
+			const allRequested = remaining.length === 0 && requestedSeasons.length > 0;
+			const noneRequested = requestedSeasons.length === 0;
+			const isFullyAvailable = info.fullyAvailable || (info.available && allRequested);
 
-					// Determine status
-					let statusValue = '❌ Not Requested';
-					if (object.available && allRequested) statusValue = '✅ Fully Available';
-					else if (!object.available && allRequested) statusValue = '✅ Requested';
-					else if (object.available && !allRequested) statusValue = '🟡 Partially Available';
-					else if (!object.available && !noneRequested) statusValue = '❌ Requested';
+			let statusValue = '❌ Not Requested';
+			if (isFullyAvailable) statusValue = '✅ Fully Available';
+			else if (object.available && !allRequested) statusValue = '🟡 Partially Available';
+			else if (!object.available && allRequested) statusValue = '✅ Requested';
+			else if (!object.available && !noneRequested) statusValue = '🟡 Partially Requested';
 
-					// Requested text
-					let requestedText = 'None';
-					if (allRequested) {
-						requestedText = `All (${totalSeasons})`;
-					} else if (!noneRequested) {
-						requestedText = `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})`;
-					}
-
-					// Remaining text
-					let remainingText = 'None';
-					if (noneRequested) {
-						remainingText = `All (${totalSeasons})`;
-					} else if (!allRequested) {
-						remainingText = `${formatSeasonRanges(remaining)} (${remaining.length})`;
-					}
-
-					// Add exactly 3 fields
-					embed.addFields(
-						{ name: '__Status__', value: statusValue, inline: true },
-						{ name: '__Requested__', value: requestedText, inline: true },
-						{ name: '__Remaining__', value: remainingText, inline: true }
-					);
-
-				} else {
-					// Movie: Only 1 field
-					if (object.available) {
-						embed.addFields({ name: '__Available__', value: '✅', inline: true });
-					} else if (object.requested) {
-						embed.addFields({ name: '__Requested__', value: '✅', inline: true });
+			const formatSeasonRanges = seasons => {
+				if (!seasons.length) return '';
+				seasons.sort((a, b) => a - b);
+				const ranges = [];
+				let [start, end] = [seasons[0], seasons[0]];
+				for (let i = 1; i <= seasons.length; i++) {
+					if (seasons[i] === end + 1) end = seasons[i];
+					else {
+						ranges.push(start === end ? `${start}` : `${start}-${end}`);
+						[start, end] = [seasons[i], seasons[i]];
 					}
 				}
+				return ranges.join(', ');
+			};
 
-				return embed;
-			} catch (err) {
-				console.log('error in showBuilder:', err);
-			}
+			embed.addFields(
+				{ name: '__Status__', value: statusValue, inline: true },
+				{ name: '__Requested__', value: requestedSeasons.length ? `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})` : `None`, inline: true },
+				{ name: '__Remaining__', value: remaining.length ? `${formatSeasonRanges(remaining)} (${remaining.length})` : `None`, inline: true }
+			);
+		} else {
+			if (object.available)
+				embed.addFields({ name: '__Available__', value: '✅', inline: true });
+			else if (object.requested)
+				embed.addFields({ name: '__Requested__', value: '✅', inline: true });
 		}
 
-		function timeOut(interaction) {
-			if (timerManager.has(messageId)) clearTimeout(timerManager.get(messageId));
-			const timer = setTimeout(() => {
-				try {
-					console.log(`Search for ${info.title} timed out`);
-					interaction.followUp({ content: `Your request for ${info.title} timed out`, ephemeral: true });
-					interaction.deleteReply();
-				} catch (err) {
-					console.log(err);
-				}
-			}, timerExp);
-			timerManager.set(messageId, timer);
-		}
-
-		const embedMessage = showBuilder();
-
-		// Components
 		const objectSelect = new StringSelectMenuBuilder()
 			.setCustomId('media_selector')
 			.setPlaceholder('Make another selection')
 			.addOptions(objectsWithoutDefault);
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
+
 		let componentsArray = [selectMenu];
-
-		if (isTv) {
-			const remaining = this.remainingSeasons.get(messageId) || [];
-			const allRequested = totalSeasons > 0 && remaining.length === 0;
-
-			if (allRequested) {
-				componentsArray.push(new ActionRowBuilder().addComponents(
-					new ButtonBuilder()
-						.setCustomId('mediaAvailable')
-						.setLabel(`${object.title.substr(0, 58)} Is Already Requested!`)
-						.setStyle(ButtonStyle.Primary)
-						.setDisabled(true)
-				));
-			} else {
-				componentsArray.push(new ActionRowBuilder().addComponents(
-					new ButtonBuilder()
-						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
-						.setStyle(ButtonStyle.Primary)
-						.setLabel('Request')
-				));
-			}
+		if ((isTv && remaining.length > 0) || (!isTv && !(object.requested || object.available))) {
+			componentsArray.push(new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
+					.setStyle(ButtonStyle.Primary)
+					.setLabel('Request')
+			));
 		} else {
-			if (!(object.requested || object.available)) {
-				componentsArray.push(new ActionRowBuilder().addComponents(
-					new ButtonBuilder()
-						.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
-						.setStyle(ButtonStyle.Primary)
-						.setLabel('Request')
-				));
-			} else {
-				componentsArray.push(new ActionRowBuilder().addComponents(
-					new ButtonBuilder()
-						.setCustomId('mediaAvailable')
-						.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
-						.setStyle(ButtonStyle.Primary)
-						.setDisabled(true)
-				));
-			}
+			componentsArray.push(new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId('mediaAvailable')
+					.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(true)
+			));
 		}
 
 		try {
-			if (!interaction.message) {
-				interaction.reply({ embeds: [embedMessage], components: componentsArray }).then(() => timeOut(interaction));
-			} else {
-				interaction.update({ embeds: [embedMessage], components: componentsArray }).then(() => timeOut(interaction));
-			}
+			if (!interaction.message)
+				await interaction.reply({ embeds: [embed], components: componentsArray });
+			else
+				await interaction.update({ embeds: [embed], components: componentsArray });
 		} catch (err) {
-			console.log(err);
+			console.error(err);
 		}
 	},
 	async sendRequest(interaction, id, mediaType, messageId, seasonSelection) {
