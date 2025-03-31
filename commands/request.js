@@ -179,16 +179,28 @@ module.exports = {
 		}
 
 		let isFullyAvailable = false;
-		if (isTv && Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
-			const allRequestedSeasons = info.seasonRequests.filter(s =>
-				s.episodes?.some(e => e.requested === true)
-			);
-			isFullyAvailable = allRequestedSeasons.length > 0 &&
-				allRequestedSeasons.every(season =>
-					season.episodes.every(e => e.available === true)
-				);
-		} else {
-			isFullyAvailable = info.available;
+		if (isTv) {
+			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
+				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
+				totalSeasons = allSeasonNumbers.length;
+
+				requestedSeasons = info.seasonRequests
+					.filter(season => Array.isArray(season.episodes) && season.episodes.some(e => e.requested))
+					.map(s => s.seasonNumber);
+
+				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
+
+				this.availableSeasons.set(messageId, allSeasonNumbers);
+				this.remainingSeasons.set(messageId, remaining);
+			} else {
+				// Assume full show is available based on top-level `available`
+				requestedSeasons = info.available ? ['all'] : [];
+				remaining = info.available ? [] : ['all'];
+				totalSeasons = 1;
+
+				this.availableSeasons.set(messageId, requestedSeasons);
+				this.remainingSeasons.set(messageId, remaining);
+			}
 		}
 
 		const object = {
