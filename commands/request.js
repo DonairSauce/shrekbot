@@ -139,20 +139,40 @@ module.exports = {
 
 		const isMovie = mediaType === 'movie';
 		const isTv = mediaType === 'tv';
-		const apiSubUrl = isMovie
-			? '/api/v2/Search/movie/'
-			: '/api/v2/Request/tv/info/';
-
 		let info;
 		try {
-			info = await fetch(`http://${ombiIP}:${ombiPort}${apiSubUrl}${movieDbId}`, {
+			// Get base info first
+			const baseRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Search/${isMovie ? 'movie' : 'tv/moviedb'}/${movieDbId}`, {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
-			}).then(response => response.json());
-			console.log(`[DEBUG] API used: ${apiSubUrl}${movieDbId}`);
-			console.log(`[DEBUG] Full response from Ombi: ${JSON.stringify(info, null, 2)}`);
+			});
+			if (!baseRes.ok) console.warn(`[WARN] Base info fetch failed: ${baseRes.status}`);
+			const baseInfo = await baseRes.json();
+
+			if (isTv) {
+				// Extra call for accurate seasonRequests
+				const requestRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Request/tv/info/${movieDbId}`, {
+					method: 'get',
+					headers: { accept: 'application/json', ApiKey: ombiToken },
+				});
+				if (!requestRes.ok) console.warn(`[WARN] Request info fetch failed: ${requestRes.status}`);
+				const requestInfo = await requestRes.json();
+
+				// Merge the two (prefer requestInfo for season details)
+				info = {
+					...baseInfo,
+					seasonRequests: requestInfo.seasonRequests || [],
+					requested: requestInfo.requested,
+					available: requestInfo.available
+				};
+
+				console.log(`[DEBUG] Combined TV info for ${info.title}:`, JSON.stringify(info, null, 2));
+			} else {
+				info = baseInfo;
+				console.log(`[DEBUG] Movie info for ${info.title}:`, JSON.stringify(info, null, 2));
+			}
 		} catch (err) {
-			console.log(err);
+			console.log('[ERROR] Fetching media info:', err);
 		}
 
 		let isFullyAvailable = false;
@@ -199,6 +219,9 @@ module.exports = {
 				} else {
 					remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
 				}
+
+				console.log(`[DEBUG] Requested seasons for ${info.title}:`, requestedSeasons);
+				console.log(`[DEBUG] Remaining seasons for ${info.title}:`, remaining);
 
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
