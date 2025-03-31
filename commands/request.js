@@ -145,12 +145,14 @@ module.exports = {
 		let remaining = [];
 
 		let info;
+		let baseInfo;
+
 		try {
 			// Fetch base info (movie or tv)
 			const baseRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Search/${isMovie ? 'movie' : 'tv/moviedb'}/${movieDbId}`, {
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			});
-			const baseInfo = await baseRes.json();
+			baseInfo = await baseRes.json();
 
 			if (isTv) {
 				let matchedShow;
@@ -160,7 +162,7 @@ module.exports = {
 					});
 					if (!tvLiteRes.ok) throw new Error(`TVLite fetch failed: ${tvLiteRes.status}`);
 					const tvLiteData = await tvLiteRes.json();
-
+					
 					matchedShow = tvLiteData.find(entry => entry.externalProviderId === parseInt(movieDbId));
 				} catch (err) {
 					console.warn(`[WARN] Failed to fetch TVLite info: ${err.message}`);
