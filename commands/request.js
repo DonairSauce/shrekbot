@@ -139,6 +139,11 @@ module.exports = {
 
 		const isMovie = mediaType === 'movie';
 		const isTv = mediaType === 'tv';
+
+		let totalSeasons = 0;
+		let requestedSeasons = [];
+		let remaining = [];
+		
 		let info;
 		try {
 			// Fetch base info (movie or tv)
@@ -193,7 +198,6 @@ module.exports = {
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
-				// Assume full show is available based on top-level `available`
 				requestedSeasons = info.available ? ['all'] : [];
 				remaining = info.available ? [] : ['all'];
 				totalSeasons = 1;
@@ -215,10 +219,6 @@ module.exports = {
 		};
 
 		// Handle TV seasons
-		let totalSeasons = 0;
-		let requestedSeasons = [];
-		let remaining = [];
-
 		if (isTv) {
 			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
