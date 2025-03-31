@@ -198,14 +198,15 @@ module.exports = {
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
-				if (info.fullyAvailable) {
+				if (info.fullyAvailable || info.available) {
 					requestedSeasons = ['all'];
 					remaining = [];
+					totalSeasons = 1;
 				} else {
-					requestedSeasons = info.available ? ['all'] : [];
-					remaining = info.available ? [] : ['all'];
+					requestedSeasons = [];
+					remaining = ['all'];
+					totalSeasons = 1;
 				}
-				totalSeasons = 1;
 
 				this.availableSeasons.set(messageId, requestedSeasons);
 				this.remainingSeasons.set(messageId, remaining);
@@ -220,7 +221,7 @@ module.exports = {
 			image: isMovie ? info.posterPath : info.banner,
 			imdbID: info.imdbId,
 			available: info.available || info.fullyAvailable,
-			requested: info.requested,
+			requested: info.requested || (info.fullyAvailable || requestedSeasons.length > 0),
 		};
 
 		// Handle TV seasons
@@ -296,10 +297,10 @@ module.exports = {
 
 					// Determine status
 					let statusValue = '❌ Not Requested';
-					if (allRequested && object.available) statusValue = '✅ Fully Available';
-					else if (allRequested && !object.available) statusValue = '✅ Requested';
-					else if (!noneRequested && object.available) statusValue = '🟡 Partially Available';
-					else if (!noneRequested && !object.available) statusValue = '❌ Requested';
+					if (object.available && allRequested) statusValue = '✅ Fully Available';
+					else if (!object.available && allRequested) statusValue = '✅ Requested';
+					else if (object.available && !allRequested) statusValue = '🟡 Partially Available';
+					else if (!object.available && !noneRequested) statusValue = '❌ Requested';
 
 					// Requested text
 					let requestedText = 'None';
@@ -314,7 +315,7 @@ module.exports = {
 					if (noneRequested) {
 						remainingText = `All (${totalSeasons})`;
 					} else if (!allRequested) {
-						remainingText = formatSeasonRanges(remaining);
+						remainingText = `${formatSeasonRanges(remaining)} (${remaining.length})`;
 					}
 
 					// Add exactly 3 fields
