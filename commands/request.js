@@ -139,7 +139,9 @@ module.exports = {
 
 		const isMovie = mediaType === 'movie';
 		const isTv = mediaType === 'tv';
-		const apiSubUrl = isMovie ? '/api/v2/Search/movie/' : '/api/v2/Search/tv/moviedb/';
+		const apiSubUrl = isMovie
+			? '/api/v2/Search/movie/'
+			: '/api/v2/Request/tv/info/';
 
 		let info;
 		try {
@@ -147,7 +149,8 @@ module.exports = {
 				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			}).then(response => response.json());
-			console.log(`[DEBUG] Full show info for ${info.title}:`, JSON.stringify(info, null, 2));
+			console.log(`[DEBUG] API used: ${apiSubUrl}${movieDbId}`);
+			console.log(`[DEBUG] Full response from Ombi: ${JSON.stringify(info, null, 2)}`);
 		} catch (err) {
 			console.log(err);
 		}
@@ -243,7 +246,7 @@ module.exports = {
 
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
-					console.log(`All requested ${allRequested}`)	
+					console.log(`All requested ${allRequested}`)
 					console.log(`Show is available: ${object.available}`);
 					console.log(`Remaining season(s) length: ${remaining.length}`);
 					const noneRequested = requestedSeasons.length === 0;
