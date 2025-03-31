@@ -162,7 +162,7 @@ module.exports = {
 					});
 					if (!tvLiteRes.ok) throw new Error(`TVLite fetch failed: ${tvLiteRes.status}`);
 					const tvLiteData = await tvLiteRes.json();
-					
+
 					matchedShow = tvLiteData.find(entry => entry.externalProviderId === parseInt(movieDbId));
 				} catch (err) {
 					console.warn(`[WARN] Failed to fetch TVLite info: ${err.message}`);
@@ -210,14 +210,18 @@ module.exports = {
 
 			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
-				totalSeasons = allSeasonNumbers.length;
-
 				requestedSeasons = info.seasonRequests
 					.filter(season => season.episodes.some(e => e.requested))
 					.map(s => s.seasonNumber);
-
+				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
+			} else if (Array.isArray(baseInfo.childRequests) && baseInfo.childRequests.length > 0) {
+				const allSeasonNumbers = baseInfo.childRequests.map(s => s.seasonNumber);
+				requestedSeasons = baseInfo.childRequests
+					.filter(season => season.available || season.requested)
+					.map(s => s.seasonNumber);
 				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
 			} else {
+				// Fallback if no childRequests are available
 				if (info.fullyAvailable || info.available) {
 					requestedSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
 					remaining = [];
