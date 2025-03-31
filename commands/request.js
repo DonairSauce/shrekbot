@@ -186,10 +186,12 @@ module.exports = {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
 				totalSeasons = allSeasonNumbers.length;
 
-				// Treat any season with a seasonRequest entry as requested
-				requestedSeasons = [...allSeasonNumbers];
+				// Only treat seasons as requested if they have at least one episode
+				requestedSeasons = info.seasonRequests
+					.filter(s => Array.isArray(s.episodes) && s.episodes.length > 0)
+					.map(s => s.seasonNumber);
 
-				// If all seasons are in requested, there are no remaining
+				// Remaining are those in allSeasonNumbers not in requestedSeasons
 				if (requestedSeasons.length === totalSeasons) {
 					remaining = [];
 				} else {
@@ -199,7 +201,6 @@ module.exports = {
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
-				// No seasonRequests means none are requested, all remaining
 				remaining = ['all'];
 				this.availableSeasons.set(messageId, []);
 				this.remainingSeasons.set(messageId, remaining);
@@ -240,18 +241,18 @@ module.exports = {
 						text: `Searched by ${interaction.member.user.username}`,
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
-		
+
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
 					const noneRequested = requestedSeasons.length === 0;
-		
+
 					// Determine status
 					let statusValue = '❌ Not Requested';
 					if (allRequested && object.available) statusValue = '✅ Fully Available';
 					else if (allRequested && !object.available) statusValue = '✅ Requested';
 					else if (!noneRequested && object.available) statusValue = '🟡 Partially Available';
 					else if (!noneRequested && !object.available) statusValue = '❌ Requested';
-		
+
 					// Requested text
 					let requestedText = 'None';
 					if (allRequested) {
@@ -259,7 +260,7 @@ module.exports = {
 					} else if (!noneRequested) {
 						requestedText = `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})`;
 					}
-		
+
 					// Remaining text
 					let remainingText = 'None';
 					if (noneRequested) {
@@ -267,14 +268,14 @@ module.exports = {
 					} else if (!allRequested) {
 						remainingText = formatSeasonRanges(remaining);
 					}
-		
+
 					// Add exactly 3 fields
 					embed.addFields(
 						{ name: '__Status__', value: statusValue, inline: true },
 						{ name: '__Requested__', value: requestedText, inline: true },
 						{ name: '__Remaining__', value: remainingText, inline: true }
 					);
-		
+
 				} else {
 					// Movie: Only 1 field
 					if (object.available) {
@@ -283,12 +284,12 @@ module.exports = {
 						embed.addFields({ name: '__Requested__', value: '✅', inline: true });
 					}
 				}
-		
+
 				return embed;
 			} catch (err) {
 				console.log('error in showBuilder:', err);
 			}
-		}		
+		}
 
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) clearTimeout(timerManager.get(messageId));
