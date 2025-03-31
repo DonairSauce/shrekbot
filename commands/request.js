@@ -240,50 +240,55 @@ module.exports = {
 						text: `Searched by ${interaction.member.user.username}`,
 						iconURL: `https://cdn.discordapp.com/avatars/${interaction.member.user.id}/${interaction.member.user.avatar}.png`,
 					});
-
-				// Show "Requested" only if true
-				if (object.requested) {
-					embed.addFields([{ name: '__Requested__', value: '✅', inline: true }]);
-				}
-
+		
 				if (isTv) {
 					const allRequested = totalSeasons > 0 && remaining.length === 0;
 					const noneRequested = requestedSeasons.length === 0;
-
-					// Determine status field
+		
+					// Determine status
 					let statusValue = '❌ Not Requested';
 					if (allRequested && object.available) statusValue = '✅ Fully Available';
 					else if (allRequested && !object.available) statusValue = '✅ Requested';
 					else if (!noneRequested && object.available) statusValue = '🟡 Partially Available';
 					else if (!noneRequested && !object.available) statusValue = '❌ Requested';
-
-					// Status
-					embed.addFields({ name: '__Status__', value: statusValue, inline: true });
-
-					// Requested
+		
+					// Requested text
 					let requestedText = 'None';
 					if (allRequested) {
 						requestedText = `All (${totalSeasons})`;
 					} else if (!noneRequested) {
 						requestedText = `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})`;
 					}
-					embed.addFields({ name: '__Requested__', value: requestedText, inline: true });
-
-					// Remaining
+		
+					// Remaining text
 					let remainingText = 'None';
 					if (noneRequested) {
 						remainingText = `All (${totalSeasons})`;
 					} else if (!allRequested) {
 						remainingText = formatSeasonRanges(remaining);
 					}
-					embed.addFields({ name: '__Remaining__', value: remainingText, inline: true });
+		
+					// Add exactly 3 fields
+					embed.addFields(
+						{ name: '__Status__', value: statusValue, inline: true },
+						{ name: '__Requested__', value: requestedText, inline: true },
+						{ name: '__Remaining__', value: remainingText, inline: true }
+					);
+		
+				} else {
+					// Movie: Only 1 field
+					if (object.available) {
+						embed.addFields({ name: '__Available__', value: '✅', inline: true });
+					} else if (object.requested) {
+						embed.addFields({ name: '__Requested__', value: '✅', inline: true });
+					}
 				}
-
+		
 				return embed;
 			} catch (err) {
 				console.log('error in showBuilder:', err);
 			}
-		}
+		}		
 
 		function timeOut(interaction) {
 			if (timerManager.has(messageId)) clearTimeout(timerManager.get(messageId));
