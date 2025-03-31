@@ -141,29 +141,31 @@ module.exports = {
 		const isTv = mediaType === 'tv';
 		let info;
 		try {
-			// Get base info first
+			// Fetch base info (movie or tv)
 			const baseRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Search/${isMovie ? 'movie' : 'tv/moviedb'}/${movieDbId}`, {
-				method: 'get',
 				headers: { accept: 'application/json', ApiKey: ombiToken },
 			});
-			if (!baseRes.ok) console.warn(`[WARN] Base info fetch failed: ${baseRes.status}`);
 			const baseInfo = await baseRes.json();
 
 			if (isTv) {
-				// Extra call for accurate seasonRequests
-				const requestRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Request/tv/info/${movieDbId}`, {
-					method: 'get',
-					headers: { accept: 'application/json', ApiKey: ombiToken },
-				});
-				if (!requestRes.ok) console.warn(`[WARN] Request info fetch failed: ${requestRes.status}`);
-				const requestInfo = await requestRes.json();
+				let matchedShow;
+				try {
+					const tvLiteRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tvlite`, {
+						headers: { accept: 'application/json', ApiKey: ombiToken },
+					});
+					if (!tvLiteRes.ok) throw new Error(`TVLite fetch failed: ${tvLiteRes.status}`);
+					const tvLiteData = await tvLiteRes.json();
 
-				// Merge the two (prefer requestInfo for season details)
+					matchedShow = tvLiteData.find(entry => entry.externalProviderId === parseInt(movieDbId));
+				} catch (err) {
+					console.warn(`[WARN] Failed to fetch TVLite info: ${err.message}`);
+				}
+
 				info = {
 					...baseInfo,
-					seasonRequests: requestInfo.seasonRequests || [],
-					requested: requestInfo.requested,
-					available: requestInfo.available
+					seasonRequests: matchedShow?.seasonRequests || [],
+					requested: matchedShow?.requested ?? baseInfo.requested,
+					available: matchedShow?.available ?? baseInfo.available
 				};
 
 				console.log(`[DEBUG] Combined TV info for ${info.title}:`, JSON.stringify(info, null, 2));
@@ -172,7 +174,8 @@ module.exports = {
 				console.log(`[DEBUG] Movie info for ${info.title}:`, JSON.stringify(info, null, 2));
 			}
 		} catch (err) {
-			console.log('[ERROR] Fetching media info:', err);
+			console.error('[ERROR] Fetching media info:', err);
+			return interaction.reply({ content: '❌ Failed to retrieve media info.', ephemeral: true });
 		}
 
 		let isFullyAvailable = false;
