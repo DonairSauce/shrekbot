@@ -186,9 +186,8 @@ module.exports = {
 				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
 				totalSeasons = allSeasonNumbers.length;
 
-				// Only treat seasons as requested if they have at least one episode
 				requestedSeasons = info.seasonRequests
-					.filter(s => Array.isArray(s.episodes) && s.episodes.length > 0)
+					.filter(season => Array.isArray(season.episodes) && season.episodes.some(e => e.requested))
 					.map(s => s.seasonNumber);
 
 				// Remaining are those in allSeasonNumbers not in requestedSeasons
