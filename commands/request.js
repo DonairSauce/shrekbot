@@ -198,8 +198,13 @@ module.exports = {
 				this.availableSeasons.set(messageId, allSeasonNumbers);
 				this.remainingSeasons.set(messageId, remaining);
 			} else {
-				requestedSeasons = info.available ? ['all'] : [];
-				remaining = info.available ? [] : ['all'];
+				if (info.fullyAvailable) {
+					requestedSeasons = ['all'];
+					remaining = [];
+				} else {
+					requestedSeasons = info.available ? ['all'] : [];
+					remaining = info.available ? [] : ['all'];
+				}
 				totalSeasons = 1;
 
 				this.availableSeasons.set(messageId, requestedSeasons);
@@ -214,7 +219,7 @@ module.exports = {
 			description: info.overview,
 			image: isMovie ? info.posterPath : info.banner,
 			imdbID: info.imdbId,
-			available: isFullyAvailable,
+			available: info.available || info.fullyAvailable,
 			requested: info.requested,
 		};
 
