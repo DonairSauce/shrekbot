@@ -195,16 +195,15 @@ module.exports = {
 							.filter(s => s.requested || s.available)
 							.map(s => s.seasonNumber);
 
-						const remaining = Array.from(
-							{ length: totalSeasons },
-							(_, i) => i + 1
-						).filter(season => !requested.includes(season));
+						const remaining = childData
+							.filter(s => !(s.requested || s.available))
+							.map(s => s.seasonNumber);
 
-						// Sort for consistent display
+						// Sort them
 						requestedSeasons = requested.sort((a, b) => a - b);
 						remainingSeasons = remaining.sort((a, b) => a - b);
 
-						// Update statusValue based on the result
+						// Update statusValue and labels correctly
 						if (requestedSeasons.length === totalSeasons) {
 							statusValue = '✅ Fully Available';
 							requestedSeasons = ['All'];
@@ -214,10 +213,11 @@ module.exports = {
 							statusValue = baseInfo.partlyAvailable
 								? '🟡 Partially Available'
 								: '🟡 Partially Requested';
-							requestButtonDisabled = remainingSeasons.length === 0;
+							requestButtonDisabled = false;
 						} else {
 							statusValue = '❌ Not Requested';
 							remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+							requestButtonDisabled = false;
 						}
 					}
 				} catch (err) {
