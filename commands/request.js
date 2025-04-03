@@ -136,119 +136,122 @@ module.exports = {
 	async search(id, interaction) {
 		const [mediaType, movieDbId, messageId, searchQuery] = id.split(',');
 		await this.getSearchResults(interaction, messageId, searchQuery);
-	  
+
 		const isMovie = mediaType === 'movie';
 		const isTv = mediaType === 'tv';
-	  
+
 		let baseInfo;
 		try {
-		  const baseRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Search/${isMovie ? 'movie' : 'tv/moviedb'}/${movieDbId}`, {
-			headers: { accept: 'application/json', ApiKey: ombiToken },
-		  });
-		  baseInfo = await baseRes.json();
+			const baseRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v2/Search/${isMovie ? 'movie' : 'tv/moviedb'}/${movieDbId}`, {
+				headers: { accept: 'application/json', ApiKey: ombiToken },
+			});
+			baseInfo = await baseRes.json();
 		} catch (err) {
-		  console.error('[ERROR] Fetching media info:', err);
-		  return interaction.reply({ content: '❌ Failed to retrieve media info.', ephemeral: true });
+			console.error('[ERROR] Fetching media info:', err);
+			return interaction.reply({ content: '❌ Failed to retrieve media info.', ephemeral: true });
 		}
-	  
+
 		const embed = new Discord.EmbedBuilder()
-		  .setColor('#0099ff')
-		  .setTitle(`${baseInfo.title}${baseInfo.releaseDate ? ` (${baseInfo.releaseDate.substring(0, 4)})` : ''}`)
-		  .setURL(`https://imdb.com/title/${baseInfo.imdbId}`)
-		  .setDescription(baseInfo.overview?.substring(0, 255) + '(...)' || 'No description')
-		  .setImage(`https://image.tmdb.org/t/p/original/${isMovie ? baseInfo.posterPath : baseInfo.banner}`)
-		  .setTimestamp()
-		  .setFooter({
-			text: `Searched by ${interaction.member.user.username}`,
-			iconURL: interaction.member.user.displayAvatarURL(),
-		  });
-	  
+			.setColor('#0099ff')
+			.setTitle(`${baseInfo.title}${baseInfo.releaseDate ? ` (${baseInfo.releaseDate.substring(0, 4)})` : ''}`)
+			.setURL(`https://imdb.com/title/${baseInfo.imdbId}`)
+			.setDescription(baseInfo.overview?.substring(0, 255) + '(...)' || 'No description')
+			.setImage(`https://image.tmdb.org/t/p/original/${isMovie ? baseInfo.posterPath : baseInfo.banner}`)
+			.setTimestamp()
+			.setFooter({
+				text: `Searched by ${interaction.member.user.username}`,
+				iconURL: interaction.member.user.displayAvatarURL(),
+			});
+
 		let requestButtonDisabled = false;
 		let statusValue = '❌ Not Requested';
-	  
+
 		if (isMovie) {
-		  if (baseInfo.available || baseInfo.fullyAvailable) {
-			statusValue = '✅ Available';
-			requestButtonDisabled = true;
-		  } else if (baseInfo.requested) {
-			statusValue = '✅ Requested';
-			requestButtonDisabled = true;
-		  }
-		  embed.addFields({ name: '__Status__', value: statusValue, inline: true });
-		} else if (isTv) {
-		  const totalSeasons = baseInfo.seasonCount || 0;
-		  let requestedSeasons = [];
-		  let remainingSeasons = [];
-	  
-		  if (baseInfo.requested && baseInfo.id) {
-			try {
-			  const childRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tv/${baseInfo.id}/child`, {
-				headers: { accept: 'application/json', ApiKey: ombiToken },
-			  });
-			  if (childRes.ok) {
-				const childData = await childRes.json();
-				requestedSeasons = childData
-				  .filter(s => s.requested || s.available)
-				  .map(s => s.seasonNumber);
-	  
-				remainingSeasons = childData
-				  .filter(s => !(s.requested || s.available))
-				  .map(s => s.seasonNumber);
-			  }
-			} catch (err) {
-			  console.warn(`[WARN] Child request fetch failed: ${err.message}`);
+			if (baseInfo.available || baseInfo.fullyAvailable) {
+				statusValue = '✅ Available';
+				requestButtonDisabled = true;
+			} else if (baseInfo.requested) {
+				statusValue = '✅ Requested';
+				requestButtonDisabled = true;
 			}
-		  }
-	  
-		  if (baseInfo.fullyAvailable) {
-			statusValue = '✅ Fully Available';
-			requestButtonDisabled = true;
-		  } else if (baseInfo.partlyAvailable) {
-			statusValue = '🟡 Partially Available';
-			requestButtonDisabled = remainingSeasons.length === 0;
-		  } else if (baseInfo.requested) {
-			statusValue = remainingSeasons.length ? '🟡 Partially Requested' : '✅ Requested';
-			requestButtonDisabled = remainingSeasons.length === 0;
-		  }
-	  
-		  if (!baseInfo.requested && !baseInfo.partlyAvailable && !baseInfo.fullyAvailable) {
-			statusValue = '❌ Not Requested';
-			remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-		  }
-	  
-		  embed.addFields(
-			{ name: '__Status__', value: statusValue, inline: true },
-			{ name: '__Requested__', value: requestedSeasons.length ? requestedSeasons.join(', ') : 'None', inline: true },
-			{ name: '__Remaining__', value: remainingSeasons.length ? remainingSeasons.join(', ') : 'None', inline: true },
-		  );
+			embed.addFields({ name: '__Status__', value: statusValue, inline: true });
+		} else if (isTv) {
+			const totalSeasons = baseInfo.seasonCount || 0;
+			let requestedSeasons = [];
+			let remainingSeasons = [];
+
+			// Always fetch child info if baseInfo.id is available
+			if (baseInfo.id) {
+				try {
+					const childRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tv/${baseInfo.id}/child`, {
+						headers: { accept: 'application/json', ApiKey: ombiToken },
+					});
+					if (childRes.ok) {
+						const childData = await childRes.json();
+						requestedSeasons = childData
+							.filter(s => s.requested || s.available)
+							.map(s => s.seasonNumber);
+
+						remainingSeasons = childData
+							.filter(s => !(s.requested || s.available))
+							.map(s => s.seasonNumber);
+					}
+				} catch (err) {
+					console.warn(`[WARN] Child request fetch failed: ${err.message}`);
+				}
+			}
+
+			if (baseInfo.fullyAvailable) {
+				statusValue = '✅ Fully Available';
+				requestButtonDisabled = true;
+			} else if (baseInfo.partlyAvailable) {
+				statusValue = '🟡 Partially Available';
+				requestButtonDisabled = remainingSeasons.length === 0;
+			} else if (baseInfo.requested) {
+				statusValue = remainingSeasons.length ? '🟡 Partially Requested' : '✅ Requested';
+				requestButtonDisabled = remainingSeasons.length === 0;
+			}
+
+			if (!baseInfo.requested && !baseInfo.partlyAvailable && !baseInfo.fullyAvailable) {
+				statusValue = '❌ Not Requested';
+				remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+			}
+
+			const formatSeasons = arr => arr.length ? arr.join(', ') : 'None';
+
+			embed.addFields(
+				{ name: '__Status__', value: statusValue, inline: true },
+				{ name: '__Requested__', value: formatSeasons(requestedSeasons), inline: true },
+				{ name: '__Remaining__', value: formatSeasons(remainingSeasons), inline: true },
+			);
 		}
-	  
+
 		const componentsArray = [
-		  new ActionRowBuilder().addComponents(
-			new StringSelectMenuBuilder()
-			  .setCustomId('media_selector')
-			  .setPlaceholder('Make another selection')
-			  .addOptions(objectsWithoutDefault),
-		  ),
-		  new ActionRowBuilder().addComponents(
-			new ButtonBuilder()
-			  .setCustomId(requestButtonDisabled ? 'mediaAvailable' : `request-button-${movieDbId}-${mediaType}-${messageId}`)
-			  .setLabel(requestButtonDisabled ? `${baseInfo.title.substr(0, 58)} Already Requested!` : 'Request')
-			  .setStyle(ButtonStyle.Primary)
-			  .setDisabled(requestButtonDisabled),
-		  ),
+			new ActionRowBuilder().addComponents(
+				new StringSelectMenuBuilder()
+					.setCustomId('media_selector')
+					.setPlaceholder('Make another selection')
+					.addOptions(objectsWithoutDefault),
+			),
+			new ActionRowBuilder().addComponents(
+				new ButtonBuilder()
+					.setCustomId(requestButtonDisabled ? 'mediaAvailable' : `request-button-${movieDbId}-${mediaType}-${messageId}`)
+					.setLabel(requestButtonDisabled ? `${baseInfo.title.substr(0, 58)} Already Requested!` : 'Request')
+					.setStyle(ButtonStyle.Primary)
+					.setDisabled(requestButtonDisabled),
+			),
 		];
-	  
+
 		try {
-		  if (!interaction.message)
-			await interaction.reply({ embeds: [embed], components: componentsArray });
-		  else
-			await interaction.update({ embeds: [embed], components: componentsArray });
+			if (!interaction.message)
+				await interaction.reply({ embeds: [embed], components: componentsArray });
+			else
+				await interaction.update({ embeds: [embed], components: componentsArray });
 		} catch (err) {
-		  console.error(err);
+			console.error(err);
 		}
-	  },
-	  async sendRequest(interaction, id, mediaType, messageId, seasonSelection) {
+	},
+	async sendRequest(interaction, id, mediaType, messageId, seasonSelection) {
 		const processing = new ActionRowBuilder().addComponents(
 			new ButtonBuilder()
 				.setCustomId('processing')
