@@ -188,13 +188,20 @@ module.exports = {
 					});
 					if (childRes.ok) {
 						const childData = await childRes.json();
-						requestedSeasons = childData
-							.filter(s => s.requested || s.available)
-							.map(s => s.seasonNumber);
 
-						remainingSeasons = childData
-							.filter(s => !(s.requested || s.available))
-							.map(s => s.seasonNumber);
+						if (childData.length > 0) {
+							requestedSeasons = childData
+								.filter(s => s.requested || s.available)
+								.map(s => s.seasonNumber);
+
+							remainingSeasons = childData
+								.filter(s => !(s.requested || s.available))
+								.map(s => s.seasonNumber);
+						} else if (baseInfo.requested || baseInfo.partlyAvailable || baseInfo.fullyAvailable) {
+							// No season data, but show is known to be requested
+							requestedSeasons = ['All'];
+							remainingSeasons = [];
+						}
 					}
 				} catch (err) {
 					console.warn(`[WARN] Child request fetch failed: ${err.message}`);
@@ -204,7 +211,7 @@ module.exports = {
 			if (baseInfo.fullyAvailable) {
 				statusValue = '✅ Fully Available';
 				requestButtonDisabled = true;
-				requestedSeasons = ['all'];
+				requestedSeasons = ['All'];
 				remainingSeasons = [];
 			} else if (baseInfo.partlyAvailable) {
 				statusValue = '🟡 Partially Available';
