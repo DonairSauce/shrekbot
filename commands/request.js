@@ -181,7 +181,7 @@ module.exports = {
 			let remainingSeasons = [];
 
 			// Always fetch child info if baseInfo.id is available
-			if (baseInfo.id) {
+			if (isTv && baseInfo.id) {
 				try {
 					const childRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tv/${baseInfo.id}/child`, {
 						headers: { accept: 'application/json', ApiKey: ombiToken },
@@ -204,6 +204,8 @@ module.exports = {
 			if (baseInfo.fullyAvailable) {
 				statusValue = '✅ Fully Available';
 				requestButtonDisabled = true;
+				requestedSeasons = ['all'];
+				remainingSeasons = [];
 			} else if (baseInfo.partlyAvailable) {
 				statusValue = '🟡 Partially Available';
 				requestButtonDisabled = remainingSeasons.length === 0;
