@@ -203,8 +203,16 @@ module.exports = {
 						requestedSeasons = requested.sort((a, b) => a - b);
 						remainingSeasons = remaining.sort((a, b) => a - b);
 
-						// Update statusValue and labels correctly
-						if (requestedSeasons.length === totalSeasons) {
+						const isAllSeasonsRequested = (seasons, total) => {
+							if (seasons.length !== total) return false;
+							const sorted = [...seasons].sort((a, b) => a - b);
+							for (let i = 1; i <= total; i++) {
+								if (sorted[i - 1] !== i) return false;
+							}
+							return true;
+						};
+
+						if (isAllSeasonsRequested(requestedSeasons, totalSeasons)) {
 							statusValue = '✅ Fully Available';
 							requestedSeasons = ['All'];
 							remainingSeasons = [];
@@ -228,7 +236,6 @@ module.exports = {
 			if (baseInfo.fullyAvailable) {
 				statusValue = '✅ Fully Available';
 				requestButtonDisabled = true;
-				requestedSeasons = ['All'];
 				remainingSeasons = [];
 			} else if (baseInfo.partlyAvailable) {
 				statusValue = '🟡 Partially Available';
