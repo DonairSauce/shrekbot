@@ -141,9 +141,6 @@ module.exports = {
 		const isTv = mediaType === 'tv';
 
 		let totalSeasons = 0;
-		let requestedSeasons = [];
-		let remaining = [];
-
 		let info;
 		let baseInfo;
 
@@ -206,46 +203,69 @@ module.exports = {
 			});
 
 		if (isTv) {
-			totalSeasons = baseInfo.childRequests?.length || baseInfo.seasonCount || 0;
+			totalSeasons = baseInfo.seasonCount || 0;
 
-			if (Array.isArray(info.seasonRequests) && info.seasonRequests.length > 0) {
-				const allSeasonNumbers = info.seasonRequests.map(s => s.seasonNumber);
-				requestedSeasons = info.seasonRequests
-					.filter(season => season.episodes.some(e => e.requested))
-					.map(s => s.seasonNumber);
-				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
-			} else if (Array.isArray(baseInfo.childRequests) && baseInfo.childRequests.length > 0) {
-				const allSeasonNumbers = baseInfo.childRequests.map(s => s.seasonNumber);
-				requestedSeasons = baseInfo.childRequests
-					.filter(season => season.available || season.requested)
-					.map(s => s.seasonNumber);
-				remaining = allSeasonNumbers.filter(season => !requestedSeasons.includes(season));
-			} else {
-				// Fallback if no childRequests are available
-				if (info.fullyAvailable || info.available) {
-					requestedSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-					remaining = [];
-				} else {
-					requestedSeasons = [];
-					remaining = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+			let requestedSeasons = [];
+			let remaining = [];
+
+			// Determine if the show should be treated as requested
+			const isRequested = baseInfo.requested || baseInfo.fullyAvailable || baseInfo.partlyAvailable || baseInfo.approved;
+
+			if (baseInfo.requested && baseInfo.id) {
+				// Fetch detailed child requests only if we have a requestId
+				try {
+					const childRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tv/${baseInfo.id}/child`, {
+						headers: { accept: 'application/json', ApiKey: ombiToken },
+					});
+
+					if (!childRes.ok) throw new Error(`Child request fetch failed: ${childRes.status}`);
+
+					const childData = await childRes.json();
+
+					if (Array.isArray(childData) && childData.length > 0) {
+						requestedSeasons = childData
+							.filter(s => s.requested || s.available)
+							.map(s => s.seasonNumber);
+
+						remaining = childData
+							.filter(s => !(s.requested || s.available))
+							.map(s => s.seasonNumber);
+					} else {
+						// Fallback if no child data
+						requestedSeasons = isRequested ? ['all'] : [];
+						remaining = isRequested ? [] : ['all'];
+					}
+				} catch (err) {
+					console.warn(`[WARN] Could not fetch child info: ${err.message}`);
+					requestedSeasons = isRequested ? ['all'] : [];
+					remaining = isRequested ? [] : ['all'];
 				}
+			} else if (isRequested) {
+				// We have no requestId, but the show is available/requested (fullyAvailable or partlyAvailable)
+				requestedSeasons = ['all'];
+				remaining = [];
+			} else {
+				requestedSeasons = [];
+				remaining = Array.from({ length: totalSeasons }, (_, i) => i + 1);
 			}
 
 			this.availableSeasons.set(messageId, requestedSeasons);
 			this.remainingSeasons.set(messageId, remaining);
 
-			const allRequested = remaining.length === 0 && requestedSeasons.length > 0;
+			const allRequested = requestedSeasons.includes('all') || (requestedSeasons.length === totalSeasons && totalSeasons > 0);
 			const noneRequested = requestedSeasons.length === 0;
-			const isFullyAvailable = info.fullyAvailable || (info.available && allRequested);
+
+			const isFullyAvailable = baseInfo.fullyAvailable || (baseInfo.available && allRequested);
 
 			let statusValue = '❌ Not Requested';
 			if (isFullyAvailable) statusValue = '✅ Fully Available';
-			else if (object.available && !allRequested) statusValue = '🟡 Partially Available';
-			else if (!object.available && allRequested) statusValue = '✅ Requested';
-			else if (!object.available && !noneRequested) statusValue = '🟡 Partially Requested';
+			else if (baseInfo.partlyAvailable || (baseInfo.available && !allRequested)) statusValue = '🟡 Partially Available';
+			else if (!baseInfo.available && allRequested) statusValue = '✅ Requested';
+			else if (!baseInfo.available && !noneRequested) statusValue = '🟡 Partially Requested';
 
 			const formatSeasonRanges = seasons => {
 				if (!seasons.length) return '';
+				if (seasons.includes('all')) return 'All';
 				seasons.sort((a, b) => a - b);
 				const ranges = [];
 				let [start, end] = [seasons[0], seasons[0]];
@@ -261,8 +281,8 @@ module.exports = {
 
 			embed.addFields(
 				{ name: '__Status__', value: statusValue, inline: true },
-				{ name: '__Requested__', value: requestedSeasons.length ? `${formatSeasonRanges(requestedSeasons)} (${requestedSeasons.length})` : `None`, inline: true },
-				{ name: '__Remaining__', value: remaining.length ? `${formatSeasonRanges(remaining)} (${remaining.length})` : `None`, inline: true }
+				{ name: '__Requested__', value: requestedSeasons.length ? `${formatSeasonRanges(requestedSeasons)}${requestedSeasons[0] !== 'all' ? ` (${requestedSeasons.length})` : ''}` : 'None', inline: true },
+				{ name: '__Remaining__', value: remaining.length ? `${formatSeasonRanges(remaining)}${remaining[0] !== 'all' ? ` (${remaining.length})` : ''}` : 'None', inline: true }
 			);
 		} else {
 			if (object.available)
