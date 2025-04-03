@@ -180,11 +180,11 @@ module.exports = {
 				iconURL: interaction.member.user.displayAvatarURL(),
 			});
 
+		let requestedSeasons = [];
+		let remaining = [];
+
 		if (isTv) {
 			totalSeasons = baseInfo.seasonCount || 0;
-
-			let requestedSeasons = [];
-			let remaining = [];
 
 			// Determine if the show should be treated as requested
 			const isRequested = baseInfo.requested || baseInfo.fullyAvailable || baseInfo.partlyAvailable || baseInfo.approved;
