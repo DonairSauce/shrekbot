@@ -276,7 +276,10 @@ module.exports = {
 		const selectMenu = new ActionRowBuilder().addComponents(objectSelect);
 
 		let componentsArray = [selectMenu];
-		if ((isTv && remaining.length > 0) || (!isTv && !(object.requested || object.available))) {
+
+		const hasRemainingSeasons = isTv ? (remaining.length > 0) : !(object.requested || object.available);
+
+		if (hasRemainingSeasons) {
 			componentsArray.push(new ActionRowBuilder().addComponents(
 				new ButtonBuilder()
 					.setCustomId(`request-button-${movieDbId}-${mediaType}-${messageId}`)
@@ -284,10 +287,11 @@ module.exports = {
 					.setLabel('Request')
 			));
 		} else {
+			const statusLabel = object.available ? 'Available' : 'Requested';
 			componentsArray.push(new ActionRowBuilder().addComponents(
 				new ButtonBuilder()
 					.setCustomId('mediaAvailable')
-					.setLabel(`${object.title.substr(0, 58)} Is Already ${object.available ? 'Available' : 'Requested'}!`)
+					.setLabel(`${object.title.substr(0, 58)} Is Already ${statusLabel}!`)
 					.setStyle(ButtonStyle.Primary)
 					.setDisabled(true)
 			));
