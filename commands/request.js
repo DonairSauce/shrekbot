@@ -189,18 +189,35 @@ module.exports = {
 					if (childRes.ok) {
 						const childData = await childRes.json();
 
-						if (childData.length > 0) {
-							requestedSeasons = childData
-								.filter(s => s.requested || s.available)
-								.map(s => s.seasonNumber);
+						const totalSeasons = baseInfo.seasonCount || 0;
 
-							remainingSeasons = childData
-								.filter(s => !(s.requested || s.available))
-								.map(s => s.seasonNumber);
-						} else if (baseInfo.requested || baseInfo.partlyAvailable || baseInfo.fullyAvailable) {
-							// No season data, but show is known to be requested
+						const requested = childData
+							.filter(s => s.requested || s.available)
+							.map(s => s.seasonNumber);
+
+						const remaining = Array.from(
+							{ length: totalSeasons },
+							(_, i) => i + 1
+						).filter(season => !requested.includes(season));
+
+						// Sort for consistent display
+						requestedSeasons = requested.sort((a, b) => a - b);
+						remainingSeasons = remaining.sort((a, b) => a - b);
+
+						// Update statusValue based on the result
+						if (requestedSeasons.length === totalSeasons) {
+							statusValue = '✅ Fully Available';
 							requestedSeasons = ['All'];
 							remainingSeasons = [];
+							requestButtonDisabled = true;
+						} else if (requestedSeasons.length > 0) {
+							statusValue = baseInfo.partlyAvailable
+								? '🟡 Partially Available'
+								: '🟡 Partially Requested';
+							requestButtonDisabled = remainingSeasons.length === 0;
+						} else {
+							statusValue = '❌ Not Requested';
+							remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
 						}
 					}
 				} catch (err) {
