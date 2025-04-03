@@ -151,29 +151,7 @@ module.exports = {
 			});
 			baseInfo = await baseRes.json();
 
-			if (isTv) {
-				let matchedShow;
-				try {
-					const tvLiteRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tvlite`, {
-						headers: { accept: 'application/json', ApiKey: ombiToken },
-					});
-					if (!tvLiteRes.ok) throw new Error(`TVLite fetch failed: ${tvLiteRes.status}`);
-					const tvLiteData = await tvLiteRes.json();
-
-					matchedShow = tvLiteData.find(entry => entry.externalProviderId === parseInt(movieDbId));
-				} catch (err) {
-					console.warn(`[WARN] Failed to fetch TVLite info: ${err.message}`);
-				}
-
-				info = {
-					...baseInfo,
-					seasonRequests: matchedShow?.seasonRequests || [],
-					requested: matchedShow?.requested ?? baseInfo.requested,
-					available: matchedShow?.available ?? baseInfo.available,
-				};
-			} else {
-				info = baseInfo;
-			}
+			info = baseInfo;
 		} catch (err) {
 			console.error('[ERROR] Fetching media info:', err);
 			return interaction.reply({ content: '❌ Failed to retrieve media info.', ephemeral: true });
