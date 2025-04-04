@@ -180,7 +180,6 @@ module.exports = {
 			let requestedSeasons = [];
 			let remainingSeasons = [];
 
-			// Always fetch child info if baseInfo.id is available
 			if (isTv && baseInfo.id) {
 				try {
 					const childRes = await fetch(`http://${ombiIP}:${ombiPort}/api/v1/Request/tv/${baseInfo.id}/child`, {
@@ -188,45 +187,33 @@ module.exports = {
 					});
 					if (childRes.ok) {
 						const childData = await childRes.json();
-						console.log(`[DEBUG] childData for ${baseInfo.title}:`, JSON.stringify(childData, null, 2));
 
-						const totalSeasons = baseInfo.seasonCount || 0;
+						// Grab all seasonRequests from any entries
+						const seasonRequests = childData.flatMap(item => item.seasonRequests || []);
 
-						const requested = childData
-							.filter(s => s.requested || s.available)
-							.map(s => s.seasonNumber);
+						if (seasonRequests.length > 0) {
+							requestedSeasons = seasonRequests
+								.filter(s => s.requested || s.available)
+								.map(s => s.seasonNumber);
 
-						const remaining = childData
-							.filter(s => !(s.requested || s.available))
-							.map(s => s.seasonNumber);
+							remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1)
+								.filter(num => !requestedSeasons.includes(num));
 
-						// Sort them
-						requestedSeasons = requested.sort((a, b) => a - b);
-						remainingSeasons = remaining.sort((a, b) => a - b);
-
-						const isAllSeasonsRequested = (seasons, total) => {
-							if (seasons.length !== total) return false;
-							const sorted = [...seasons].sort((a, b) => a - b);
-							for (let i = 1; i <= total; i++) {
-								if (sorted[i - 1] !== i) return false;
-							}
-							return true;
-						};
-
-						if (isAllSeasonsRequested(requestedSeasons, totalSeasons)) {
-							statusValue = '✅ Fully Available';
-							requestedSeasons = ['All'];
-							remainingSeasons = [];
-							requestButtonDisabled = true;
-						} else if (requestedSeasons.length > 0) {
-							statusValue = baseInfo.partlyAvailable
-								? '🟡 Partially Available'
-								: '🟡 Partially Requested';
-							requestButtonDisabled = false;
+							requestedSeasons.sort((a, b) => a - b);
+							remainingSeasons.sort((a, b) => a - b);
 						} else {
-							statusValue = '❌ Not Requested';
-							remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-							requestButtonDisabled = false;
+							// No seasonRequests - fall back to top-level availability
+							const topLevel = childData[0];
+							if (topLevel?.available) {
+								statusValue = '✅ Fully Available';
+								requestedSeasons = ['All'];
+								remainingSeasons = [];
+								requestButtonDisabled = true;
+							} else {
+								statusValue = '❌ Not Requested';
+								requestedSeasons = [];
+								remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
+							}
 						}
 					}
 				} catch (err) {
@@ -234,24 +221,37 @@ module.exports = {
 				}
 			}
 
-			if (baseInfo.fullyAvailable) {
+			// If not already determined by fallback
+			if (statusValue === '❌ Not Requested' && baseInfo.fullyAvailable) {
 				statusValue = '✅ Fully Available';
-				requestButtonDisabled = true;
+				requestedSeasons = ['All'];
 				remainingSeasons = [];
-			} else if (baseInfo.partlyAvailable) {
+				requestButtonDisabled = true;
+			} else if (statusValue === '❌ Not Requested' && baseInfo.partlyAvailable) {
 				statusValue = '🟡 Partially Available';
-				requestButtonDisabled = remainingSeasons.length === 0;
-			} else if (baseInfo.requested) {
+			} else if (statusValue === '❌ Not Requested' && baseInfo.requested) {
 				statusValue = remainingSeasons.length ? '🟡 Partially Requested' : '✅ Requested';
 				requestButtonDisabled = remainingSeasons.length === 0;
 			}
 
-			if (!baseInfo.requested && !baseInfo.partlyAvailable && !baseInfo.fullyAvailable) {
-				statusValue = '❌ Not Requested';
-				remainingSeasons = Array.from({ length: totalSeasons }, (_, i) => i + 1);
-			}
-
-			const formatSeasons = arr => arr.length ? arr.join(', ') : 'None';
+			const formatSeasons = arr => {
+				if (arr.includes('All')) return 'All';
+				if (!arr.length) return 'None';
+				arr.sort((a, b) => a - b);
+				const ranges = [];
+				let start = arr[0];
+				let end = arr[0];
+				for (let i = 1; i <= arr.length; i++) {
+					if (arr[i] === end + 1) {
+						end = arr[i];
+					} else {
+						ranges.push(start === end ? `${start}` : `${start}-${end}`);
+						start = arr[i];
+						end = arr[i];
+					}
+				}
+				return ranges.join(', ');
+			};
 
 			embed.addFields(
 				{ name: '__Status__', value: statusValue, inline: true },
