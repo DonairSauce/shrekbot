@@ -188,6 +188,7 @@ module.exports = {
 					});
 					if (childRes.ok) {
 						const childData = await childRes.json();
+						console.log(`[DEBUG] childData for ${baseInfo.title}:`, JSON.stringify(childData, null, 2));
 
 						const totalSeasons = baseInfo.seasonCount || 0;
 
