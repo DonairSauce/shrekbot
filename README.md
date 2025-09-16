@@ -4,12 +4,13 @@
 
 ## Description
 
-Shrekbot is a Discord bot inspired by the lovable ogre himself, Shrek. It allows users to request movies or TV shows to be added to Ombi, a media request platform, using API calls. With Shrekbot, requests can be made directly within the Discord client, making it convenient and fun for users to discover and request their favorite content. Additionally, Shrekbot can notify users when the requested content becomes available to watch, ensuring they never miss out on their favorite shows and movies.
+Shrekbot is a Discord bot inspired by the lovable ogre himself, Shrek. It allows users to request movies or TV shows to be added to either Ombi or Overseerr, popular media request platforms, using API calls. With Shrekbot, requests can be made directly within the Discord client, making it convenient and fun for users to discover and request their favorite content. Additionally, Shrekbot can notify users when the requested content becomes available to watch, ensuring they never miss out on their favorite shows and movies.
 
 ## Features
 
-- **Seamless Requesting**: Users can easily request movies or TV shows to be added to Ombi with simple commands right in the Discord client.
-- **Ombi Integration**: Shrekbot uses API calls to communicate with Ombi, ensuring accurate and efficient processing of requests.
+- **Seamless Requesting**: Users can easily request movies or TV shows to be added to Ombi or Overseerr with simple commands right in the Discord client.
+- **Multi-Service Support**: Shrekbot supports both Ombi and Overseerr, allowing you to choose the media request platform that best fits your setup.
+- **Service Integration**: Shrekbot uses API calls to communicate with your chosen service, ensuring accurate and efficient processing of requests.
 - **Notifications**: Shrekbot can notify users when the content they requested becomes available, keeping them updated and ready to watch.
 - **Shrek-themed Interface**: Embrace the charm of Shrek with a bot that reflects the spirit of the beloved ogre.
 
@@ -39,14 +40,22 @@ Generate an invite link in the **OAuth2** tab of your bot's Discord Developer Po
 
 Before running Shrekbot, you need to set the following environment variables:
 
-- `ombitoken`: Secret token of the Ombi server.
-- `ombiip`: IP address of the Ombi server.
-- `ombiport`: Port number of the Ombi server.
+#### Required for all setups:
 - `clientid`: Discord bot ID.
 - `guildid`: Discord server ID.
 - `token`: Bot token found on the [Discord Developer Portal](https://discord.com/developers/).
 - `channelfeed`: Channel ID used to notify users when content is available.
 - `timerexp`: Time (in milliseconds) before a search expires if the user doesn't respond.
+- `service`: Choose between `ombi` or `overseerr` (defaults to `ombi` if not set).
+
+#### For Ombi (original configuration):
+- `ombitoken`: Secret token of the Ombi server.
+- `ombiip`: IP address of the Ombi server.
+- `ombiport`: Port number of the Ombi server.
+
+#### For Overseerr:
+- `overseerrurl`: Full URL to your Overseerr instance (e.g., `http://192.168.1.100:5055`).
+- `overseerrtoken`: API key from Overseerr settings.
 
 You can set these environment variables in your Docker environment or in a `.env` file.
 
@@ -79,9 +88,24 @@ Then, install the dependencies using a package manager such as npm:
 
 3. Set the environment variables: Before running Shrekbot, make sure to set the required environment variables. You can do this by creating a .env file in the root directory of the project and specifying the following variables:
 
-```ombitoken=<Ombi server token>
+**For Ombi:**
+```
+service=ombi
+ombitoken=<Ombi server token>
 ombiip=<Ombi server IP>
 ombiport=<Ombi server port>
+clientid=<Discord bot ID>
+guildid=<Discord server ID>
+token=<Bot token from Discord Developer Portal>
+channelfeed=<Channel ID for notifications>
+timerexp=<Time in milliseconds for search expiration>
+```
+
+**For Overseerr:**
+```
+service=overseerr
+overseerrurl=<Full Overseerr URL (e.g., http://192.168.1.100:5055)>
+overseerrtoken=<Overseerr API key>
 clientid=<Discord bot ID>
 guildid=<Discord server ID>
 token=<Bot token from Discord Developer Portal>
@@ -112,7 +136,9 @@ Feel free to explore and request your favorite movies and TV shows with Shrekbot
 
 ![Request Example](https://i.imgur.com/mfHzkCh.png)
 
-## Enabling Notifications in Ombi
+## Enabling Notifications
+
+### For Ombi
 
 To enable notifications for content availability, follow these steps in Ombi:
 
@@ -122,7 +148,17 @@ To enable notifications for content availability, follow these steps in Ombi:
 4. In the "Base Url" field, enter the location where the bot is hosted, followed by `:8154/webhook`. For example, if the bot is hosted at `http://192.168.1.1`, enter `http://192.168.1.1:8154/webhook`.
 5. Save the settings.
 
-By enabling notifications in Ombi and providing the correct base URL, Shrekbot will be able to send notifications to the specified channel when the requested content becomes available to watch.
+### For Overseerr
+
+To enable notifications for content availability, follow these steps in Overseerr:
+
+1. Go to Overseerr settings.
+2. Navigate to "Notifications" → "Webhook".
+3. Enable the webhook and set the webhook URL to your bot's location followed by `:8154/webhook`. For example: `http://192.168.1.1:8154/webhook`.
+4. Configure the notification types you want to receive (typically "Media Available").
+5. Save the settings.
+
+By enabling notifications in your chosen service and providing the correct webhook URL, Shrekbot will be able to send notifications to the specified channel when the requested content becomes available to watch.
 
 ![Notification Example](https://i.imgur.com/BtTm5Ze.png)
 

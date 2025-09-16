@@ -1,14 +1,12 @@
 const {SlashCommandBuilder} = require('@discordjs/builders');
 const {ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, Collection} = require('discord.js');
 const {ButtonStyle} = require('discord.js');
-const fetch = require('node-fetch');
 const Discord = require('discord.js');
-const ombiIP = process.env.ombiip;
-const ombiPort = process.env.ombiport;
-const ombiToken = process.env.ombitoken;
+const ServiceFactory = require('../services/serviceFactory.js');
 const timerExp = process.env.timerexp;
 let objectsWithoutDefault = [];
 const timerManager = new Collection();
+let mediaService;
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('request')
@@ -19,6 +17,15 @@ module.exports = {
 				.setMaxLength(75)
 				.setRequired(true)),
 	async execute(interaction, messageId) {
+		if (!mediaService) {
+			try {
+				mediaService = ServiceFactory.createService();
+			} catch (error) {
+				console.error('Service initialization error:', error);
+				return interaction.reply({content: 'Service configuration error. Please contact an administrator.', ephemeral: true});
+			}
+		}
+
 		// Search term
 		let args = interaction.options.getString('search');
 		args = args.toString();
@@ -34,40 +41,28 @@ module.exports = {
 	async getSearchResults(interaction, messageId, args) {
 		const searchTerm = decodeURIComponent(args);
 		console.log(interaction.member.user.username + ' searched for "' + searchTerm + '"');
-		// Api call
-		let searchResults = {};
-		const body = {
-			movies: true, tvShows: true, music: false, people: false,
-		};
+		
+		let searchResults = [];
 		try {
-			searchResults = await fetch('http://' + ombiIP + ':' + ombiPort + '/api/v2/Search/multi/' + args, {
-				method: 'post',
-				body: JSON.stringify(body),
-				headers: {
-					accept: 'text/plain',
-					ApiKey: ombiToken,
-					'Content-Type': 'application/json-patch+json',
-				},
-
-			}).then(response => response.json());
+			const rawResults = await mediaService.search(args);
+			searchResults = mediaService.normalizeSearchResults(rawResults);
 		} catch (err) {
 			console.log(err);
 		}
 
 		// Place results into an object
-		if (Object.keys(searchResults).length > 0) {
+		if (searchResults && searchResults.length > 0) {
 			const mediaResults = [];
 			let maxResults = 10;
 
-			if (Object.keys(searchResults).length < maxResults) {
-				maxResults = Object.keys(searchResults).length;
+			if (searchResults.length < maxResults) {
+				maxResults = searchResults.length;
 			}
 
 			for (let i = 0; i < maxResults; i++) {
 				const object = {};
 
 				object.id = searchResults[i].id;
-
 				object.mediaType = searchResults[i].mediaType;
 				object.title = searchResults[i].title;
 				object.overview = searchResults[i].overview;
@@ -134,27 +129,12 @@ module.exports = {
 		let info;
 
 		try {
-			info = await fetch('http://' + ombiIP + ':' + ombiPort + apiSubUrl + movieDbId, {
-				method: 'get',
-				headers: {
-					accept: 'application/json',
-					ApiKey: ombiToken,
-				},
-			}).then(response => response.json());
+			info = await mediaService.getDetails(mediaType, movieDbId);
 		} catch (err) {
 			console.log(err);
 		}
 
-		const object = {};
-
-		object.id = info.id;
-		object.releaseDate = (mediaType === 'movie' ? info.releaseDate : info.firstAired);
-		object.title = info.title;
-		object.description = info.overview;
-		object.image = (mediaType === 'movie' ? info.posterPath : info.banner);
-		object.imdbID = info.imdbId;
-		object.available = info.available;
-		object.requested = info.requested;
+		const object = mediaService.normalizeDetails(info, mediaType);
 
 		const {member} = interaction;
 
@@ -265,75 +245,27 @@ module.exports = {
 		});
 		clearTimeout(timerManager.get(messageId));
 		const {member} = interaction;
-		console.log(member.user.username + ' sent a request to Ombi');
-		if (mediaType === 'movie') {
-			try {
-				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v1/Request/movie', {
-					method: 'post',
-					headers: {
-						Accept: 'application/json',
-						'Content-Type': 'text/json',
-						ApiKey: ombiToken,
-						ApiAlias: member.user.username + '#' + member.user.discriminator + ',' + member.user.id,
-					},
-
-					body: JSON.stringify({
-						theMovieDbId: id,
-						languageCode: 'en',
-					}),
-				}).then(res => {
-					responseStatus = res.status; // Store the response status in a variable
-					return res.json();
-				}).then(async jsonResponse => {
-					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
-				}).catch(err => {
-					// Handle error
-					console.error(err);
-				});
-			} catch (err) {
-				console.error(err);
-			}
-		} else {
-			try {
-				fetch('http://' + ombiIP + ':' + ombiPort + '/api/v2/Requests/tv', {
-					method: 'post',
-					headers: {
-						Accept: 'application/json',
-						'Content-Type': 'text/json',
-						ApiKey: ombiToken,
-						ApiAlias: member.user.username + '#' + member.user.discriminator + ',' + member.user.id,
-					},
-
-					body: JSON.stringify({
-						theMovieDbId: id,
-						requestAll: true,
-						languageCode: 'en',
-					}),
-				}).then(res => {
-					responseStatus = res.status; // Store the response status in a variable
-					return res.json();
-				}).then(async jsonResponse => {
-					await changeButton(responseStatus, jsonResponse); // Pass the response status and jsonResponse to changeButton
-				}).catch(err => {
-					// Handle error
-					console.error(err);
-				});
-			} catch (err) {
-				console.error(err);
-			}
+		const serviceName = ServiceFactory.getServiceType();
+		console.log(member.user.username + ' sent a request to ' + serviceName);
+		
+		try {
+			const userAlias = member.user.username + '#' + member.user.discriminator + ',' + member.user.id;
+			const result = await mediaService.makeRequest(mediaType, id, userAlias);
+			await changeButton(result.status, result.data, result.success);
+		} catch (err) {
+			console.error(err);
+			await changeButton(500, {error: 'Request failed'}, false);
 		}
 
-		async function changeButton(responseStatusCode, jsonResponse) {
+		async function changeButton(responseStatusCode, jsonResponse, success) {
 			console.log(jsonResponse);
-			let success = false;
 			console.log('response code ' + responseStatusCode);
-			success = responseStatusCode >= 200 && responseStatusCode < 300;
 			const row = new ActionRowBuilder()
 				.addComponents(
 					new ButtonBuilder()
 						.setCustomId('request-sent-button-' + id + '-' + mediaType + '-' + messageId)
-						.setStyle(success && !jsonResponse.isError ? ButtonStyle.Success : ButtonStyle.Danger)
-						.setLabel(success && !jsonResponse.isError ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
+						.setStyle(success ? ButtonStyle.Success : ButtonStyle.Danger)
+						.setLabel(success ? 'Your request has been submitted' : 'Request Failed: Error ' + responseStatusCode)
 						.setDisabled(true),
 				);
 

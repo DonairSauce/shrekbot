@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {Client, Collection, GatewayIntentBits} = require('discord.js');
 const request = require('./commands/request.js');
+const ServiceFactory = require('./services/serviceFactory.js');
 const {token} = process.env;
 const channelFeed = process.env.channelfeed;
 const client = new Client({intents: [GatewayIntentBits.Guilds]});
@@ -22,10 +23,14 @@ let currentId = 0;
 client.once('ready', () => {
 	const pjson = require('./package.json');
 	console.log(pjson);
-	const ombiIP = process.env.ombiip;
-	const ombiPort = process.env.ombiport;
+	const serviceType = ServiceFactory.getServiceType();
 	const timerExp = process.env.timerexp;
-	console.log('Using ombi: ' + ombiIP + ':' + ombiPort);
+	
+	if (serviceType === 'overseerr') {
+		console.log('Using Overseerr: ' + process.env.overseerrurl);
+	} else {
+		console.log('Using Ombi: ' + process.env.ombiip + ':' + process.env.ombiport);
+	}
 	console.log('Message timeout set to: ' + timerExp);
 });
 
@@ -80,31 +85,50 @@ app.use(express.json());
 app.post('/webhook', (req, res) => {
     console.log('Received webhook:', req.body);
     const payload = req.body;
+    const serviceType = ServiceFactory.getServiceType();
 
     try {
-        // Extract relevant data from the payload
-        const { requestedByAlias, title, userName, requestStatus } = payload;
+        let userId = '';
+        let title = '';
+        let isAvailable = false;
 
-        if (requestStatus === 'Available') {
-            let userId = '';
-            if (requestedByAlias) {
-                if (requestedByAlias.includes(',')) {
-                    userId = '<@' + requestedByAlias.split(',')[1] + '>';
-                } else {
-                    userId = requestedByAlias;
-                }
-            } else {
-                userId = userName;
+        if (serviceType === 'overseerr') {
+            // Overseerr webhook format
+            const { notification_type, subject, message, request } = payload;
+            
+            if (notification_type === 'MEDIA_AVAILABLE') {
+                isAvailable = true;
+                title = subject;
+                // Overseerr doesn't include user alias in webhook, use subject/message
+                userId = message || 'Someone';
             }
+        } else {
+            // Ombi webhook format
+            const { requestedByAlias, title: ombiTitle, userName, requestStatus } = payload;
+            
+            if (requestStatus === 'Available') {
+                isAvailable = true;
+                title = ombiTitle;
+                
+                if (requestedByAlias) {
+                    if (requestedByAlias.includes(',')) {
+                        userId = '<@' + requestedByAlias.split(',')[1] + '>';
+                    } else {
+                        userId = requestedByAlias;
+                    }
+                } else {
+                    userId = userName;
+                }
+            }
+        }
 
-            // Compose the Discord webhook message
+        if (isAvailable) {
             const discordMessage = `${userId}, ${title} is now available!`;
             client.channels.cache.get(channelFeed).send(discordMessage);
-
             res.sendStatus(200);
         } else {
-            console.log(`Request status is not 'Available', it is: '${requestStatus}'`);
-            res.sendStatus(200); // You might want to send a different status if the request is not processed
+            console.log(`Content not available or different notification type`);
+            res.sendStatus(200);
         }
     } catch (error) {
         console.error('Error processing webhook:', error);
