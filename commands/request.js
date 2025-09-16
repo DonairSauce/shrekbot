@@ -77,9 +77,11 @@ module.exports = {
 			objectsWithoutDefault = [];
 			mediaResults.forEach(o => {
 				const emoji = o.mediaType === 'movie' ? '🎥' : '📺';
+				const title = o.title || 'Unknown Title';
+				const overview = o.overview || 'No description available';
 				objectsWithoutDefault.push({
-					label: `${o.title.substr(0, 97) + '...'}`,
-					description: `${o.overview.substr(0, 97) + '...'}`,
+					label: title.length > 97 ? `${title.substr(0, 97)}...` : title,
+					description: overview.length > 97 ? `${overview.substr(0, 97)}...` : overview,
 					value: `${o.mediaType + ',' + o.id + ',' + messageId + ',' + args}`,
 					emoji,
 				});
@@ -140,17 +142,29 @@ module.exports = {
 
 		function showBuilder() {
 			try {
+				const title = object.title || 'Unknown Title';
+				const releaseYear = object.releaseDate ? object.releaseDate.substring(0, 4) : '';
+				const description = object.description || 'No description';
+				const imdbUrl = object.imdbID ? `https://imdb.com/title/${object.imdbID}` : null;
+				const imageUrl = object.image ? `https://image.tmdb.org/t/p/original/${object.image}` : null;
+				
 				const embed = new Discord.EmbedBuilder()
 					.setColor('#0099ff')
-					.setTitle(object.title + (object.releaseDate === null ? '' : (' (' + object.releaseDate.substring(0, 4) + ')')))
-					.setURL('https://imdb.com/title/' + object.imdbID)
-					.setDescription(object.description === undefined ? 'No description' : object.description.substr(0, 255) + '(...)')
-					.setImage('https://image.tmdb.org/t/p/original/' + object.image)
+					.setTitle(title + (releaseYear ? ` (${releaseYear})` : ''))
+					.setDescription(description.length > 255 ? `${description.substr(0, 255)}(...)` : description)
 					.setTimestamp()
 					.setFooter({
 						text: 'Searched by ' + member.user.username,
 						iconURL: `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png`,
 					});
+
+				if (imdbUrl) {
+					embed.setURL(imdbUrl);
+				}
+				
+				if (imageUrl) {
+					embed.setImage(imageUrl);
+				}
 
 				if (object.available) {
 					embed.addFields([{name: '__Available__', value: '✅', inline: true}]);
@@ -200,9 +214,10 @@ module.exports = {
 			.addComponents(objectSelect);
 
 		const availableOrRequested = object.available ? 'Available' : object.requested ? 'Requested' : '';
+		const title = object.title || 'Unknown Title';
 		const availableButton = new ButtonBuilder()
 			.setCustomId('mediaAvailable')
-			.setLabel(object.title.substr(0, 58) + ' Is Already ' + availableOrRequested + '!')
+			.setLabel((title.length > 58 ? title.substr(0, 58) : title) + ' Is Already ' + availableOrRequested + '!')
 			.setStyle(ButtonStyle.Primary)
 			.setDisabled(true);
 		try {

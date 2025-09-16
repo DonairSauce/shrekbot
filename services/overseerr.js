@@ -8,7 +8,7 @@ class OverseerrService {
 
 	async search(query) {
 		try {
-			const response = await fetch(`${this.baseUrl}/api/v1/search?query=${encodeURIComponent(query)}`, {
+			const response = await fetch(`${this.baseUrl}/api/v1/search?query=${encodeURIComponent(query)}&language=en`, {
 				method: 'get',
 				headers: {
 					accept: 'application/json',
@@ -16,6 +16,7 @@ class OverseerrService {
 				},
 			});
 			const data = await response.json();
+			console.log('Overseerr search response:', JSON.stringify(data, null, 2));
 			return data.results || [];
 		} catch (error) {
 			console.error('Overseerr search error:', error);
@@ -80,15 +81,16 @@ class OverseerrService {
 
 		return results.map(item => ({
 			id: item.id,
-			mediaType: item.mediaType,
-			title: item.title || item.name,
-			overview: item.overview,
-			poster: item.posterPath ? `https://image.tmdb.org/t/p/w500${item.posterPath}` : null,
-			releaseDate: item.releaseDate || item.firstAirDate,
-			imdbId: item.externalIds?.imdbId,
-			available: item.mediaInfo?.status === 5,
-			requested: item.mediaInfo?.status && item.mediaInfo.status > 1 && item.mediaInfo.status < 5,
-			image: item.posterPath || item.backdropPath
+			mediaType: item.media_type || item.mediaType || (item.title ? 'movie' : 'tv'),
+			title: item.title || item.name || 'Unknown Title',
+			overview: item.overview || 'No description available',
+			poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+			releaseDate: item.release_date || item.first_air_date || item.releaseDate || item.firstAirDate,
+			imdbId: item.external_ids?.imdb_id || item.externalIds?.imdbId,
+			available: item.mediaInfo?.status === 5 || item.media_info?.status === 5,
+			requested: (item.mediaInfo?.status && item.mediaInfo.status > 1 && item.mediaInfo.status < 5) || 
+					  (item.media_info?.status && item.media_info.status > 1 && item.media_info.status < 5),
+			image: item.poster_path || item.backdrop_path || item.posterPath || item.backdropPath
 		}));
 	}
 
